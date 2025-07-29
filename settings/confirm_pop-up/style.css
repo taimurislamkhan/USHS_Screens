@@ -1,0 +1,121 @@
+.settings-confirm-pop-up,
+.settings-confirm-pop-up * {
+  box-sizing: border-box;
+}
+.settings-confirm-pop-up {
+  background: #494d55;
+  border-radius: 36px;
+  height: 1080px;
+  position: relative;
+  overflow: hidden;
+}
+.frame-203 {
+  background: rgba(26, 27, 29, 0.77);
+  width: 1920px;
+  height: 1080px;
+  position: absolute;
+  left: 0px;
+  top: 0px;
+  backdrop-filter: blur(8px);
+}
+.frame-124 {
+  background: #373a40;
+  border-radius: 24px;
+  border-style: solid;
+  border-color: #434851;
+  border-width: 5px;
+  width: 1090px;
+  height: 682px;
+  position: absolute;
+  left: calc(50% - 641px);
+  top: 50%;
+  translate: 0 -50%;
+  box-shadow: 0px 12px 24px 2px rgba(0, 0, 0, 0.16);
+  overflow: hidden;
+}
+.confirmation-text {
+  color: #7a8089;
+  text-align: left;
+  font-family: "SuisseIntl-Regular", sans-serif;
+  font-size: 32px;
+  line-height: 46px;
+  font-weight: 400;
+  position: absolute;
+  left: 64px;
+  top: 163px;
+}
+.confirmation-heading {
+  color: #ffffff;
+  text-align: left;
+  font-family: "SuisseIntl-Medium", sans-serif;
+  font-size: 52px;
+  letter-spacing: -0.01em;
+  font-weight: 500;
+  position: absolute;
+  left: 64px;
+  top: 64px;
+}
+.frame-194 {
+  display: flex;
+  flex-direction: row;
+  gap: 30px;
+  align-items: center;
+  justify-content: flex-start;
+  width: 1030px;
+  height: 131px;
+  position: absolute;
+  left: 30px;
+  top: 521px;
+}
+.confirm {
+  background: #2c67cc;
+  border-radius: 16px;
+  border-width: 1px 2px 0px 1px;
+  border-style: solid;
+  border-image: transparent;
+  border-image-slice: 1;
+  align-self: stretch;
+  flex: 1;
+  position: relative;
+  box-shadow: inset 2px 4px 12px 1px rgba(85, 125, 194, 1),
+    0px 0px 6px 0px rgba(44, 103, 204, 0.67);
+  overflow: hidden;
+}
+.confirm2 {
+  color: #ffffff;
+  text-align: center;
+  font-family: "SuisseIntlMono-Regular", sans-serif;
+  font-size: 30px;
+  letter-spacing: 0.03em;
+  font-weight: 400;
+  position: absolute;
+  left: 50%;
+  translate: -50% -50%;
+  top: 50%;
+}
+.dismiss {
+  background: #1e1f22;
+  border-radius: 16px;
+  border-style: solid;
+  border-color: #313338;
+  border-width: 2px 0px 0px 0px;
+  align-self: stretch;
+  flex: 1;
+  position: relative;
+  box-shadow: 0px 0px 12px 0px rgba(49, 51, 56, 0.42),
+    inset 0px 4px 24px 0px rgba(55, 58, 65, 1),
+    inset 0px 2px 4px 0px rgba(70, 74, 83, 1);
+  overflow: hidden;
+}
+.dismiss2 {
+  color: #ffffff;
+  text-align: center;
+  font-family: "SuisseIntlMono-Regular", sans-serif;
+  font-size: 30px;
+  letter-spacing: 0.03em;
+  font-weight: 400;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
