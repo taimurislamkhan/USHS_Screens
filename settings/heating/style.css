@@ -850,7 +850,7 @@
   top: 20px;
   box-shadow: 0px 2px 12px 0px rgba(0, 0, 0, 0.14);
 }
-.frame-47 {
+.navigation-tabs {
   display: flex;
   flex-direction: row;
   gap: 0px;
@@ -861,7 +861,8 @@
   left: 170px;
   top: 12px;
 }
-.frame-45 {
+.tab-active {
+  background: #27292d;
   border-radius: 24px 24px 0px 0px;
   padding: 32px 64px 32px 64px;
   display: flex;
@@ -873,7 +874,33 @@
   height: 108px;
   position: relative;
 }
-.work-position {
+.tab-text-active {
+  color: #ffffff;
+  text-align: center;
+  font-family: "SuisseIntl-Medium", sans-serif;
+  font-size: 32px;
+  font-weight: 500;
+  position: relative;
+  white-space: nowrap;
+}
+.tab-inactive {
+  border-radius: 24px 24px 0px 0px;
+  padding: 32px 64px 32px 64px;
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  height: 108px;
+  position: relative;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+.tab-inactive:hover {
+  opacity: 0.8;
+}
+.tab-text-inactive {
   color: #272a2f;
   text-align: center;
   font-family: "SuisseIntl-Book", sans-serif;
@@ -881,47 +908,6 @@
   font-weight: 400;
   position: relative;
   white-space: nowrap;
-}
-.frame-44 {
-  background: #27292d;
-  border-radius: 24px 24px 0px 0px;
-  padding: 32px 128px 32px 128px;
-  display: flex;
-  flex-direction: row;
-  gap: 10px;
-  align-items: center;
-  justify-content: center;
-  flex: 1;
-  height: 108px;
-  position: relative;
-}
-.heating {
-  color: #ffffff;
-  text-align: left;
-  font-family: "SuisseIntl-Medium", sans-serif;
-  font-size: 38px;
-  font-weight: 500;
-  position: relative;
-}
-.frame-472 {
-  border-radius: 24px 24px 0px 0px;
-  padding: 32px 128px 32px 128px;
-  display: flex;
-  flex-direction: row;
-  gap: 10px;
-  align-items: center;
-  justify-content: center;
-  flex: 1;
-  height: 108px;
-  position: relative;
-}
-.configuration {
-  color: #272a2f;
-  text-align: left;
-  font-family: "SuisseIntl-Book", sans-serif;
-  font-size: 38px;
-  font-weight: 400;
-  position: relative;
 }
 .logo {
   width: 116px;

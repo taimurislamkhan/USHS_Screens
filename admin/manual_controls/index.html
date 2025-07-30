@@ -40,14 +40,14 @@
 <body>
   <div class="admin-manual-controls">
     <div class="frame-160">
-      <div class="home">
+      <div class="home" onclick="navigateToPage('../../index.html')">
         <div class="rectangle-4"></div>
         <div class="frame">
           <img class="svg-repo-icon-carrier" src="svg-repo-icon-carrier0.svg" />
         </div>
       </div>
       <div class="frame-184">
-        <div class="button-control">
+        <div class="button-control" onclick="navigateToPage('../../settings/work_position/index.html')">
           <div class="rectangle-42"></div>
           <div class="frame2">
             <img
@@ -133,12 +133,30 @@
       <div class="frame-45">
         <div class="manual-controls">Manual Controls</div>
       </div>
-      <div class="monitor">
+      <div class="monitor" onclick="navigateToPage('../monitor/index.html')">
         <div class="monitor2">Monitor</div>
       </div>
     </div>
     <img class="image-3" src="image-30.png" />
   </div>
   
+  <script>
+    function navigateToPage(relativePath) {
+      window.location.href = relativePath;
+    }
+    
+    // Add click styling to navigation buttons
+    const style = document.createElement('style');
+    style.textContent = `
+      .home, .button-control, .monitor {
+        cursor: pointer;
+        transition: opacity 0.2s ease;
+      }
+      .home:hover, .button-control:hover, .monitor:hover {
+        opacity: 0.8;
+      }
+    `;
+    document.head.appendChild(style);
+  </script>
 </body>
 </html>

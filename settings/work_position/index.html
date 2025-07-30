@@ -40,7 +40,7 @@
 <body>
   <div class="settings-work-position">
     <div class="navigation-bar-vertical">
-      <div class="button-home">
+      <div class="button-home" onclick="navigateToPage('../../index.html')">
         <div class="rectangle-4"></div>
         <div class="frame">
           <img class="svg-repo-icon-carrier" src="svg-repo-icon-carrier0.svg" />
@@ -55,7 +55,7 @@
             />
           </div>
         </div>
-        <div class="button-settings">
+        <div class="button-settings" onclick="navigateToPage('../../admin/manual_controls/index.html')">
           <div class="rectangle-42"></div>
           <div class="frame2">
             <img
@@ -221,22 +221,37 @@
         </div>
       </div>
     </div>
-    <div class="container-navbar">
-      <div class="frame-45">
-        <div class="work-position2">Work Position</div>
+    <div class="navigation-tabs">
+      <div class="tab-active">
+        <div class="tab-text-active">Work Position</div>
       </div>
-      <div class="frame-44">
-        <div class="heating">Heating</div>
+      <div class="tab-inactive" onclick="navigateToPage('../heating/index.html')">
+        <div class="tab-text-inactive">Heating</div>
       </div>
-      <div class="separator">|</div>
-      <img class="line-8" src="line-80.svg" />
-      <img class="line-10" src="line-100.svg" />
-      <div class="frame-47">
-        <div class="configuration">Configuration</div>
+      <div class="tab-inactive" onclick="navigateToPage('../config/index.html')">
+        <div class="tab-text-inactive">Configuration</div>
       </div>
     </div>
     <img class="logo" src="logo0.png" />
   </div>
   
+  <script>
+    function navigateToPage(relativePath) {
+      window.location.href = relativePath;
+    }
+    
+    // Add click styling to navigation buttons
+    const style = document.createElement('style');
+    style.textContent = `
+      .button-control, .button-home, .button-settings, .tab-inactive {
+        cursor: pointer;
+        transition: opacity 0.2s ease;
+      }
+      .button-control:hover, .button-home:hover, .button-settings:hover, .tab-inactive:hover {
+        opacity: 0.8;
+      }
+    `;
+    document.head.appendChild(style);
+  </script>
 </body>
 </html>

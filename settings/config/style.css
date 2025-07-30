@@ -716,7 +716,7 @@
   left: 877px;
   top: 32px;
 }
-.frame-47 {
+.navigation-tabs {
   display: flex;
   flex-direction: row;
   gap: 0px;
@@ -727,55 +727,7 @@
   left: 170px;
   top: 12px;
 }
-.frame-45 {
-  border-radius: 24px 24px 0px 0px;
-  padding: 32px 64px 32px 64px;
-  display: flex;
-  flex-direction: row;
-  gap: 10px;
-  align-items: center;
-  justify-content: center;
-  flex: 1;
-  height: 108px;
-  position: relative;
-}
-.work-position-navbar {
-  color: #272a2f;
-  text-align: center;
-  font-family: "SuisseIntl-Book", sans-serif;
-  font-size: 32px;
-  font-weight: 400;
-  position: relative;
-  white-space: nowrap;
-}
-.line-10 {
-  flex-shrink: 0;
-  width: 44px;
-  height: 0px;
-  position: relative;
-  overflow: visible;
-}
-.frame-44 {
-  border-radius: 24px 24px 0px 0px;
-  padding: 32px 64px 32px 64px;
-  display: flex;
-  flex-direction: row;
-  gap: 10px;
-  align-items: center;
-  justify-content: center;
-  flex: 1;
-  height: 108px;
-  position: relative;
-}
-.heating-navbar {
-  color: #272a2f;
-  text-align: left;
-  font-family: "SuisseIntl-Book", sans-serif;
-  font-size: 38px;
-  font-weight: 400;
-  position: relative;
-}
-.frame-472 {
+.tab-active {
   background: #27292d;
   border-radius: 24px 24px 0px 0px;
   padding: 32px 64px 32px 64px;
@@ -788,13 +740,40 @@
   height: 108px;
   position: relative;
 }
-.configuration {
+.tab-text-active {
   color: #ffffff;
-  text-align: left;
+  text-align: center;
   font-family: "SuisseIntl-Medium", sans-serif;
-  font-size: 38px;
+  font-size: 32px;
   font-weight: 500;
   position: relative;
+  white-space: nowrap;
+}
+.tab-inactive {
+  border-radius: 24px 24px 0px 0px;
+  padding: 32px 64px 32px 64px;
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  height: 108px;
+  position: relative;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+.tab-inactive:hover {
+  opacity: 0.8;
+}
+.tab-text-inactive {
+  color: #272a2f;
+  text-align: center;
+  font-family: "SuisseIntl-Book", sans-serif;
+  font-size: 32px;
+  font-weight: 400;
+  position: relative;
+  white-space: nowrap;
 }
 .image-3 {
   width: 116px;

@@ -40,7 +40,7 @@
 <body>
   <div class="settings-config">
     <div class="frame-160">
-      <div class="button-home">
+      <div class="button-home" onclick="navigateToPage('../../index.html')">
         <div class="rectangle-4"></div>
         <div class="frame">
           <img class="svg-repo-icon-carrier" src="svg-repo-icon-carrier0.svg" />
@@ -55,7 +55,7 @@
             />
           </div>
         </div>
-        <div class="button-settings">
+        <div class="button-settings" onclick="navigateToPage('../../admin/manual_controls/index.html')">
           <div class="rectangle-42"></div>
           <div class="frame2">
             <img
@@ -238,20 +238,37 @@
       <div class="weld-cycle">Weld Cycle</div>
       <div class="boss-insert-detection">Boss/Insert Detection</div>
     </div>
-    <div class="frame-47">
-      <div class="frame-45">
-        <div class="work-position-navbar">Work Position</div>
+    <div class="navigation-tabs">
+      <div class="tab-inactive" onclick="navigateToPage('../work_position/index.html')">
+        <div class="tab-text-inactive">Work Position</div>
       </div>
-      <img class="line-10" src="line-100.svg" />
-      <div class="frame-44">
-        <div class="heating-navbar">Heating</div>
+      <div class="tab-inactive" onclick="navigateToPage('../heating/index.html')">
+        <div class="tab-text-inactive">Heating</div>
       </div>
-      <div class="frame-472">
-        <div class="configuration">Configuration</div>
+      <div class="tab-active">
+        <div class="tab-text-active">Configuration</div>
       </div>
     </div>
     <img class="image-3" src="image-30.png" />
   </div>
   
+  <script>
+    function navigateToPage(relativePath) {
+      window.location.href = relativePath;
+    }
+    
+    // Add click styling to navigation buttons
+    const style = document.createElement('style');
+    style.textContent = `
+      .tab-inactive, .button-home, .button-settings {
+        cursor: pointer;
+        transition: opacity 0.2s ease;
+      }
+      .tab-inactive:hover, .button-home:hover, .button-settings:hover {
+        opacity: 0.8;
+      }
+    `;
+    document.head.appendChild(style);
+  </script>
 </body>
 </html>

@@ -41,11 +41,29 @@
   <div id="home-container"></div>
   
   <script>
+    // Global navigation function
+    function navigateToPage(relativePath) {
+      window.location.href = relativePath;
+    }
+
     // Load HomeScreen.html content
     fetch('HomeScreen.html?t=' + new Date().getTime())
       .then(response => response.text())
       .then(html => {
         document.getElementById('home-container').innerHTML = html;
+        
+        // Add click styling to navigation buttons
+        const style = document.createElement('style');
+        style.textContent = `
+          .button-control-in-active, .button-home, .button-settings-in-active {
+            cursor: pointer;
+            transition: opacity 0.2s ease;
+          }
+          .button-control-in-active:hover, .button-home:hover, .button-settings-in-active:hover {
+            opacity: 0.8;
+          }
+        `;
+        document.head.appendChild(style);
       })
       .catch(error => {
         console.error('Error loading HomeScreen.html:', error);

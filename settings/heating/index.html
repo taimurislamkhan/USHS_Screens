@@ -40,7 +40,7 @@
 <body>
   <div class="settings-heating">
     <div class="frame-160">
-      <div class="frame-180">
+      <div class="frame-180" onclick="navigateToPage('../../index.html')">
         <div class="rectangle-4"></div>
         <div class="frame">
           <img class="svg-repo-icon-carrier" src="svg-repo-icon-carrier0.svg" />
@@ -55,7 +55,7 @@
             />
           </div>
         </div>
-        <div class="button-settings">
+        <div class="button-settings" onclick="navigateToPage('../../admin/manual_controls/index.html')">
           <div class="rectangle-42"></div>
           <div class="frame2">
             <img
@@ -288,19 +288,37 @@
         </div>
       </div>
     </div>
-    <div class="frame-47">
-      <div class="frame-45">
-        <div class="work-position">Work Position</div>
+    <div class="navigation-tabs">
+      <div class="tab-inactive" onclick="navigateToPage('../work_position/index.html')">
+        <div class="tab-text-inactive">Work Position</div>
       </div>
-      <div class="frame-44">
-        <div class="heating">Heating</div>
+      <div class="tab-active">
+        <div class="tab-text-active">Heating</div>
       </div>
-      <div class="frame-472">
-        <div class="configuration">Configuration</div>
+      <div class="tab-inactive" onclick="navigateToPage('../config/index.html')">
+        <div class="tab-text-inactive">Configuration</div>
       </div>
     </div>
     <img class="logo" src="logo0.png" />
   </div>
   
+  <script>
+    function navigateToPage(relativePath) {
+      window.location.href = relativePath;
+    }
+    
+    // Add click styling to navigation buttons
+    const style = document.createElement('style');
+    style.textContent = `
+      .tab-inactive, .frame-180, .button-settings {
+        cursor: pointer;
+        transition: opacity 0.2s ease;
+      }
+      .tab-inactive:hover, .frame-180:hover, .button-settings:hover {
+        opacity: 0.8;
+      }
+    `;
+    document.head.appendChild(style);
+  </script>
 </body>
 </html>
