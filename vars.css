@@ -1,3 +1,40 @@
+/* Font Declarations */
+@font-face {
+  font-family: 'SuisseIntlMono-Regular';
+  src: url('./fonts/SuisseIntlMono-Regular.woff2') format('woff2'),
+       url('./fonts/SuisseIntlMono-Regular.woff') format('woff');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'SuisseIntl-Regular';
+  src: url('./fonts/SuisseIntl-Regular.woff2') format('woff2'),
+       url('./fonts/SuisseIntl-Regular.woff') format('woff');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'SuisseIntl-Medium';
+  src: url('./fonts/SuisseIntl-Medium.woff2') format('woff2'),
+       url('./fonts/SuisseIntl-Medium.woff') format('woff');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'SuisseIntl-Book';
+  src: url('./fonts/SuisseIntl-Book.woff2') format('woff2'),
+       url('./fonts/SuisseIntl-Book.woff') format('woff');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* Figma Styles of your File */
 :root {
   /* Colors */

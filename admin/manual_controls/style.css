@@ -177,7 +177,7 @@
 .platen {
   color: #ffffff;
   text-align: left;
-  font-family: "SuisseIntlMono-Regular", sans-serif;
+  font-family: "SuisseIntlMono-Regular", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Courier New", monospace;
   font-size: 36px;
   font-weight: 400;
   text-transform: uppercase;
@@ -212,7 +212,7 @@
 .manual-platen-distance {
   color: #ffffff;
   text-align: center;
-  font-family: "SuisseIntlMono-Regular", sans-serif;
+  font-family: "SuisseIntlMono-Regular", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Courier New", monospace;
   font-size: 46px;
   font-weight: 400;
   position: absolute;
@@ -316,7 +316,7 @@
 .heating {
   color: #ffffff;
   text-align: left;
-  font-family: "SuisseIntlMono-Regular", sans-serif;
+  font-family: "SuisseIntlMono-Regular", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Courier New", monospace;
   font-size: 36px;
   font-weight: 400;
   text-transform: uppercase;
@@ -327,7 +327,7 @@
 .cooling {
   color: #ffffff;
   text-align: left;
-  font-family: "SuisseIntlMono-Regular", sans-serif;
+  font-family: "SuisseIntlMono-Regular", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Courier New", monospace;
   font-size: 36px;
   font-weight: 400;
   text-transform: uppercase;
@@ -376,7 +376,7 @@
 ._1 {
   color: #ffffff;
   text-align: center;
-  font-family: "SuisseIntlMono-Regular", sans-serif;
+  font-family: "SuisseIntlMono-Regular", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Courier New", monospace;
   font-size: 46px;
   font-weight: 400;
   position: absolute;
@@ -404,7 +404,7 @@
 ._2 {
   color: #ffffff;
   text-align: center;
-  font-family: "SuisseIntlMono-Regular", sans-serif;
+  font-family: "SuisseIntlMono-Regular", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Courier New", monospace;
   font-size: 46px;
   font-weight: 400;
   position: absolute;
@@ -432,7 +432,7 @@
 ._3 {
   color: #ffffff;
   text-align: center;
-  font-family: "SuisseIntlMono-Regular", sans-serif;
+  font-family: "SuisseIntlMono-Regular", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Courier New", monospace;
   font-size: 46px;
   font-weight: 400;
   position: absolute;
@@ -460,7 +460,7 @@
 ._4 {
   color: #ffffff;
   text-align: center;
-  font-family: "SuisseIntlMono-Regular", sans-serif;
+  font-family: "SuisseIntlMono-Regular", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Courier New", monospace;
   font-size: 46px;
   font-weight: 400;
   position: absolute;
@@ -498,7 +498,7 @@
 ._5 {
   color: #ffffff;
   text-align: center;
-  font-family: "SuisseIntlMono-Regular", sans-serif;
+  font-family: "SuisseIntlMono-Regular", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Courier New", monospace;
   font-size: 46px;
   font-weight: 400;
   position: absolute;
@@ -526,7 +526,7 @@
 ._6 {
   color: #ffffff;
   text-align: center;
-  font-family: "SuisseIntlMono-Regular", sans-serif;
+  font-family: "SuisseIntlMono-Regular", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Courier New", monospace;
   font-size: 46px;
   font-weight: 400;
   position: absolute;
@@ -554,7 +554,7 @@
 ._7 {
   color: #ffffff;
   text-align: center;
-  font-family: "SuisseIntlMono-Regular", sans-serif;
+  font-family: "SuisseIntlMono-Regular", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Courier New", monospace;
   font-size: 46px;
   font-weight: 400;
   position: absolute;
@@ -582,7 +582,7 @@
 ._8 {
   color: #ffffff;
   text-align: center;
-  font-family: "SuisseIntlMono-Regular", sans-serif;
+  font-family: "SuisseIntlMono-Regular", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Courier New", monospace;
   font-size: 46px;
   font-weight: 400;
   position: absolute;
@@ -612,7 +612,7 @@
 .on {
   color: #ffffff;
   text-align: center;
-  font-family: "SuisseIntlMono-Regular", sans-serif;
+  font-family: "SuisseIntlMono-Regular", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Courier New", monospace;
   font-size: 50px;
   font-weight: 400;
   position: absolute;
@@ -648,7 +648,7 @@
 .manual-controls {
   color: #ffffff;
   text-align: left;
-  font-family: "SuisseIntl-Medium", sans-serif;
+  font-family: "SuisseIntl-Medium", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   font-size: 38px;
   font-weight: 500;
   position: relative;
@@ -670,7 +670,7 @@
 .monitor2 {
   color: #272a2f;
   text-align: left;
-  font-family: "SuisseIntl-Book", sans-serif;
+  font-family: "SuisseIntl-Regular", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   font-size: 38px;
   font-weight: 400;
   position: relative;

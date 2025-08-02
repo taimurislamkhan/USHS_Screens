@@ -206,7 +206,7 @@
 .return-to-tips {
   color: #ffffff;
   text-align: left;
-  font-family: "SuisseIntl-Book", sans-serif;
+  font-family: "SuisseIntl-Regular", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   font-size: 36px;
   letter-spacing: -0.01em;
   font-weight: 400;
@@ -215,7 +215,7 @@
 .tip-header {
   color: #ffffff;
   text-align: center;
-  font-family: "SuisseIntl-Medium", sans-serif;
+  font-family: "SuisseIntl-Medium", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   font-size: 40px;
   letter-spacing: -0.01em;
   font-weight: 500;
@@ -251,7 +251,7 @@
 .energy {
   color: #ffffff;
   text-align: left;
-  font-family: "SuisseIntlMono-Regular", sans-serif;
+  font-family: "SuisseIntlMono-Regular", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Courier New", monospace;
   font-size: 36px;
   font-weight: 400;
   text-transform: uppercase;
@@ -287,7 +287,7 @@
 .energy-counter {
   color: #ffffff;
   text-align: center;
-  font-family: "SuisseIntlMono-Regular", sans-serif;
+  font-family: "SuisseIntlMono-Regular", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Courier New", monospace;
   font-size: 50px;
   font-weight: 400;
   position: absolute;
@@ -368,7 +368,7 @@
 .distance {
   color: #ffffff;
   text-align: left;
-  font-family: "SuisseIntlMono-Regular", sans-serif;
+  font-family: "SuisseIntlMono-Regular", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Courier New", monospace;
   font-size: 36px;
   font-weight: 400;
   text-transform: uppercase;
@@ -379,7 +379,7 @@
 .distance-coutner {
   color: #ffffff;
   text-align: center;
-  font-family: "SuisseIntlMono-Regular", sans-serif;
+  font-family: "SuisseIntlMono-Regular", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Courier New", monospace;
   font-size: 50px;
   font-weight: 400;
   position: absolute;
@@ -453,7 +453,7 @@
 .heat-start-delay {
   color: #ffffff;
   text-align: left;
-  font-family: "SuisseIntlMono-Regular", sans-serif;
+  font-family: "SuisseIntlMono-Regular", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Courier New", monospace;
   font-size: 28px;
   line-height: 34px;
   font-weight: 400;
@@ -486,7 +486,7 @@
 .heat-start-delay2 {
   color: #ffffff;
   text-align: center;
-  font-family: "SuisseIntlMono-Regular", sans-serif;
+  font-family: "SuisseIntlMono-Regular", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Courier New", monospace;
   font-size: 36px;
   font-weight: 400;
   position: absolute;
@@ -590,7 +590,7 @@
 .power {
   color: #ffffff;
   text-align: left;
-  font-family: "SuisseIntlMono-Regular", sans-serif;
+  font-family: "SuisseIntlMono-Regular", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Courier New", monospace;
   font-size: 36px;
   font-weight: 400;
   text-transform: uppercase;
@@ -624,7 +624,7 @@
 .work-position-navbar {
   color: #272a2f;
   text-align: center;
-  font-family: "SuisseIntl-Book", sans-serif;
+  font-family: "SuisseIntl-Regular", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   font-size: 32px;
   font-weight: 400;
   position: relative;
@@ -646,7 +646,7 @@
 .heating {
   color: #ffffff;
   text-align: left;
-  font-family: "SuisseIntl-Medium", sans-serif;
+  font-family: "SuisseIntl-Medium", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   font-size: 38px;
   font-weight: 500;
   position: relative;
@@ -666,7 +666,7 @@
 .configuration-navbar {
   color: #272a2f;
   text-align: left;
-  font-family: "SuisseIntl-Book", sans-serif;
+  font-family: "SuisseIntl-Regular", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   font-size: 38px;
   font-weight: 400;
   position: relative;

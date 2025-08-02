@@ -215,7 +215,7 @@
 .energy {
   color: #ffffff;
   text-align: left;
-  font-family: "SuisseIntlMono-Regular", sans-serif;
+  font-family: "SuisseIntlMono-Regular", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Courier New", monospace;
   font-size: 28px;
   line-height: 34px;
   font-weight: 400;
@@ -249,7 +249,7 @@
 .tip-1-joules {
   color: #ffffff;
   text-align: center;
-  font-family: "SuisseIntlMono-Regular", sans-serif;
+  font-family: "SuisseIntlMono-Regular", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Courier New", monospace;
   font-size: 36px;
   font-weight: 400;
   position: absolute;
@@ -270,7 +270,7 @@
 .distance {
   color: #ffffff;
   text-align: left;
-  font-family: "SuisseIntlMono-Regular", sans-serif;
+  font-family: "SuisseIntlMono-Regular", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Courier New", monospace;
   font-size: 28px;
   line-height: 34px;
   font-weight: 400;
@@ -291,7 +291,7 @@
 .tip-1-distance {
   color: #ffffff;
   text-align: center;
-  font-family: "SuisseIntlMono-Regular", sans-serif;
+  font-family: "SuisseIntlMono-Regular", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Courier New", monospace;
   font-size: 36px;
   font-weight: 400;
   position: absolute;
@@ -318,7 +318,7 @@
 ._1 {
   color: #ffffff;
   text-align: center;
-  font-family: "SuisseIntlMono-Regular", sans-serif;
+  font-family: "SuisseIntlMono-Regular", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Courier New", monospace;
   font-size: 24px;
   letter-spacing: -0.02em;
   font-weight: 400;
@@ -356,7 +356,7 @@
 .active {
   color: #ffffff;
   text-align: center;
-  font-family: "SuisseIntlMono-Regular", sans-serif;
+  font-family: "SuisseIntlMono-Regular", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Courier New", monospace;
   font-size: 24px;
   font-weight: 400;
   position: relative;
@@ -387,7 +387,7 @@
 .tip-2-energy {
   color: #ffffff;
   text-align: center;
-  font-family: "SuisseIntlMono-Regular", sans-serif;
+  font-family: "SuisseIntlMono-Regular", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Courier New", monospace;
   font-size: 36px;
   font-weight: 400;
   position: absolute;
@@ -398,7 +398,7 @@
 .tip-2-distance {
   color: #ffffff;
   text-align: center;
-  font-family: "SuisseIntlMono-Regular", sans-serif;
+  font-family: "SuisseIntlMono-Regular", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Courier New", monospace;
   font-size: 36px;
   font-weight: 400;
   position: absolute;
@@ -409,7 +409,7 @@
 ._2 {
   color: #ffffff;
   text-align: center;
-  font-family: "SuisseIntlMono-Regular", sans-serif;
+  font-family: "SuisseIntlMono-Regular", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Courier New", monospace;
   font-size: 24px;
   letter-spacing: -0.02em;
   font-weight: 400;
@@ -447,7 +447,7 @@
 .tip-3-energy {
   color: #ffffff;
   text-align: center;
-  font-family: "SuisseIntlMono-Regular", sans-serif;
+  font-family: "SuisseIntlMono-Regular", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Courier New", monospace;
   font-size: 36px;
   font-weight: 400;
   position: absolute;
@@ -458,7 +458,7 @@
 .tip-3-distance {
   color: #ffffff;
   text-align: center;
-  font-family: "SuisseIntlMono-Regular", sans-serif;
+  font-family: "SuisseIntlMono-Regular", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Courier New", monospace;
   font-size: 36px;
   font-weight: 400;
   position: absolute;
@@ -469,7 +469,7 @@
 ._3 {
   color: #ffffff;
   text-align: center;
-  font-family: "SuisseIntlMono-Regular", sans-serif;
+  font-family: "SuisseIntlMono-Regular", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Courier New", monospace;
   font-size: 24px;
   letter-spacing: -0.02em;
   font-weight: 400;
@@ -507,7 +507,7 @@
 .tip-4-energy {
   color: #ffffff;
   text-align: center;
-  font-family: "SuisseIntlMono-Regular", sans-serif;
+  font-family: "SuisseIntlMono-Regular", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Courier New", monospace;
   font-size: 36px;
   font-weight: 400;
   position: absolute;
@@ -518,7 +518,7 @@
 .tip-4-distance {
   color: #ffffff;
   text-align: center;
-  font-family: "SuisseIntlMono-Regular", sans-serif;
+  font-family: "SuisseIntlMono-Regular", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Courier New", monospace;
   font-size: 36px;
   font-weight: 400;
   position: absolute;
@@ -529,7 +529,7 @@
 ._4 {
   color: #ffffff;
   text-align: center;
-  font-family: "SuisseIntlMono-Regular", sans-serif;
+  font-family: "SuisseIntlMono-Regular", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Courier New", monospace;
   font-size: 24px;
   letter-spacing: -0.02em;
   font-weight: 400;
@@ -579,7 +579,7 @@
 .energy2 {
   color: #555c65;
   text-align: left;
-  font-family: "SuisseIntlMono-Regular", sans-serif;
+  font-family: "SuisseIntlMono-Regular", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Courier New", monospace;
   font-size: 28px;
   line-height: 34px;
   font-weight: 400;
@@ -602,7 +602,7 @@
 .tip-5-energy {
   color: #555c65;
   text-align: center;
-  font-family: "SuisseIntlMono-Regular", sans-serif;
+  font-family: "SuisseIntlMono-Regular", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Courier New", monospace;
   font-size: 36px;
   font-weight: 400;
   position: absolute;
@@ -613,7 +613,7 @@
 .distance2 {
   color: #555c65;
   text-align: left;
-  font-family: "SuisseIntlMono-Regular", sans-serif;
+  font-family: "SuisseIntlMono-Regular", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Courier New", monospace;
   font-size: 28px;
   line-height: 34px;
   font-weight: 400;
@@ -624,7 +624,7 @@
 .tip-5-distance {
   color: #555c65;
   text-align: center;
-  font-family: "SuisseIntlMono-Regular", sans-serif;
+  font-family: "SuisseIntlMono-Regular", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Courier New", monospace;
   font-size: 36px;
   font-weight: 400;
   position: absolute;
@@ -635,7 +635,7 @@
 ._5 {
   color: #555c65;
   text-align: center;
-  font-family: "SuisseIntlMono-Regular", sans-serif;
+  font-family: "SuisseIntlMono-Regular", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Courier New", monospace;
   font-size: 24px;
   letter-spacing: -0.02em;
   font-weight: 400;
@@ -671,7 +671,7 @@
 .inactive {
   color: #ffffff;
   text-align: center;
-  font-family: "SuisseIntlMono-Regular", sans-serif;
+  font-family: "SuisseIntlMono-Regular", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Courier New", monospace;
   font-size: 24px;
   font-weight: 400;
   position: relative;
@@ -691,7 +691,7 @@
 .tip-6-energy {
   color: #555c65;
   text-align: center;
-  font-family: "SuisseIntlMono-Regular", sans-serif;
+  font-family: "SuisseIntlMono-Regular", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Courier New", monospace;
   font-size: 36px;
   font-weight: 400;
   position: absolute;
@@ -702,7 +702,7 @@
 .tip-6-distance {
   color: #555c65;
   text-align: center;
-  font-family: "SuisseIntlMono-Regular", sans-serif;
+  font-family: "SuisseIntlMono-Regular", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Courier New", monospace;
   font-size: 36px;
   font-weight: 400;
   position: absolute;
@@ -713,7 +713,7 @@
 ._6 {
   color: #555c65;
   text-align: center;
-  font-family: "SuisseIntlMono-Regular", sans-serif;
+  font-family: "SuisseIntlMono-Regular", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Courier New", monospace;
   font-size: 24px;
   letter-spacing: -0.02em;
   font-weight: 400;
@@ -749,7 +749,7 @@
 .tip-7-energy {
   color: #555c65;
   text-align: center;
-  font-family: "SuisseIntlMono-Regular", sans-serif;
+  font-family: "SuisseIntlMono-Regular", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Courier New", monospace;
   font-size: 36px;
   font-weight: 400;
   position: absolute;
@@ -760,7 +760,7 @@
 .tip-7-distance {
   color: #555c65;
   text-align: center;
-  font-family: "SuisseIntlMono-Regular", sans-serif;
+  font-family: "SuisseIntlMono-Regular", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Courier New", monospace;
   font-size: 36px;
   font-weight: 400;
   position: absolute;
@@ -771,7 +771,7 @@
 ._7 {
   color: #555c65;
   text-align: center;
-  font-family: "SuisseIntlMono-Regular", sans-serif;
+  font-family: "SuisseIntlMono-Regular", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Courier New", monospace;
   font-size: 24px;
   letter-spacing: -0.02em;
   font-weight: 400;
@@ -807,7 +807,7 @@
 .tip-8-energy {
   color: #555c65;
   text-align: center;
-  font-family: "SuisseIntlMono-Regular", sans-serif;
+  font-family: "SuisseIntlMono-Regular", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Courier New", monospace;
   font-size: 36px;
   font-weight: 400;
   position: absolute;
@@ -818,7 +818,7 @@
 .tip-8-distance {
   color: #555c65;
   text-align: center;
-  font-family: "SuisseIntlMono-Regular", sans-serif;
+  font-family: "SuisseIntlMono-Regular", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Courier New", monospace;
   font-size: 36px;
   font-weight: 400;
   position: absolute;
@@ -829,7 +829,7 @@
 ._8 {
   color: #555c65;
   text-align: center;
-  font-family: "SuisseIntlMono-Regular", sans-serif;
+  font-family: "SuisseIntlMono-Regular", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Courier New", monospace;
   font-size: 24px;
   letter-spacing: -0.02em;
   font-weight: 400;
@@ -877,7 +877,7 @@
 .tab-text-active {
   color: #ffffff;
   text-align: center;
-  font-family: "SuisseIntl-Medium", sans-serif;
+  font-family: "SuisseIntl-Medium", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   font-size: 32px;
   font-weight: 500;
   position: relative;
@@ -903,7 +903,7 @@
 .tab-text-inactive {
   color: #272a2f;
   text-align: center;
-  font-family: "SuisseIntl-Book", sans-serif;
+  font-family: "SuisseIntl-Regular", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   font-size: 32px;
   font-weight: 400;
   position: relative;

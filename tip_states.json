@@ -1,0 +1,74 @@
+{
+  "1": {
+    "id": 1,
+    "state": 1,
+    "joules": 3.4564655941382,
+    "distance": 0.5047690656358027,
+    "progress": 86,
+    "text": "Active",
+    "active": true
+  },
+  "2": {
+    "id": 2,
+    "state": 0,
+    "joules": 0.0,
+    "distance": 0.0,
+    "progress": 0,
+    "text": "Inactive",
+    "active": false
+  },
+  "3": {
+    "id": 3,
+    "state": 1,
+    "joules": -0.901463409396365,
+    "distance": 0.8273634790600419,
+    "progress": 75,
+    "text": "Active",
+    "active": true
+  },
+  "4": {
+    "id": 4,
+    "state": 1,
+    "joules": -2.6891414366386095,
+    "distance": -0.49802415898233804,
+    "progress": 75,
+    "text": "Active",
+    "active": true
+  },
+  "5": {
+    "id": 5,
+    "state": 0,
+    "joules": 0.0,
+    "distance": 0.0,
+    "progress": 0,
+    "text": "Inactive",
+    "active": false
+  },
+  "6": {
+    "id": 6,
+    "state": 0,
+    "joules": 0.0,
+    "distance": 0.0,
+    "progress": 0,
+    "text": "Inactive",
+    "active": false
+  },
+  "7": {
+    "id": 7,
+    "state": 0,
+    "joules": 0.0,
+    "distance": 0.0,
+    "progress": 0,
+    "text": "Inactive",
+    "active": false
+  },
+  "8": {
+    "id": 8,
+    "state": 0,
+    "joules": 0.0,
+    "distance": 0.0,
+    "progress": 0,
+    "text": "Inactive",
+    "active": false
+  }
+}

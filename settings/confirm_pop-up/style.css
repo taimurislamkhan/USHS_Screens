@@ -36,7 +36,7 @@
 .confirmation-text {
   color: #7a8089;
   text-align: left;
-  font-family: "SuisseIntl-Regular", sans-serif;
+  font-family: "SuisseIntl-Regular", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   font-size: 32px;
   line-height: 46px;
   font-weight: 400;
@@ -47,7 +47,7 @@
 .confirmation-heading {
   color: #ffffff;
   text-align: left;
-  font-family: "SuisseIntl-Medium", sans-serif;
+  font-family: "SuisseIntl-Medium", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   font-size: 52px;
   letter-spacing: -0.01em;
   font-weight: 500;
@@ -84,7 +84,7 @@
 .confirm2 {
   color: #ffffff;
   text-align: center;
-  font-family: "SuisseIntlMono-Regular", sans-serif;
+  font-family: "SuisseIntlMono-Regular", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Courier New", monospace;
   font-size: 30px;
   letter-spacing: 0.03em;
   font-weight: 400;
@@ -110,7 +110,7 @@
 .dismiss2 {
   color: #ffffff;
   text-align: center;
-  font-family: "SuisseIntlMono-Regular", sans-serif;
+  font-family: "SuisseIntlMono-Regular", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Courier New", monospace;
   font-size: 30px;
   letter-spacing: 0.03em;
   font-weight: 400;
