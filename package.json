@@ -1,0 +1,71 @@
+{
+  "name": "ushs-screens",
+  "version": "1.0.0",
+  "description": "USHS Screens Electron Application",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron . --no-sandbox",
+    "dev": "electron . --dev --no-sandbox",
+    "build": "electron-builder",
+    "dist": "electron-builder --publish=never"
+  },
+  "keywords": [
+    "electron",
+    "ushs",
+    "screens"
+  ],
+  "author": {
+    "name": "USHS Development Team",
+    "email": "dev@ushs.com"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.6.4"
+  },
+  "dependencies": {
+    "ws": "^8.14.2"
+  },
+  "build": {
+    "appId": "com.ushs.screens",
+    "productName": "USHS Screens",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "!node_modules/**/*",
+      "!dist/**/*",
+      "!.git/**/*",
+      "!*.md",
+      "!launch.sh",
+      "!ushs-screens.desktop"
+    ],
+    "mac": {
+      "category": "public.app-category.utilities"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": ["x64"]
+        },
+        {
+          "target": "deb",
+          "arch": ["x64"]
+        }
+      ],
+      "category": "Utility",
+      "icon": "icon-256.png",
+      "desktop": {
+        "Name": "USHS Screens",
+        "Comment": "USHS Screens Electron Application",
+        "Categories": "Utility;Application;"
+      },
+      "executableName": "ushs-screens"
+    }
+  }
+} 

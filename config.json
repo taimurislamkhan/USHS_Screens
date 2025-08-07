@@ -1,0 +1,26 @@
+{
+  "app": {
+    "name": "USHS Screens",
+    "version": "1.0.0",
+    "description": "USHS Screens Electron Application"
+  },
+  "window": {
+    "width": 1200,
+    "height": 800,
+    "minWidth": 800,
+    "minHeight": 600,
+    "title": "USHS Screens",
+    "icon": "assets/logo0.png",
+    "autoHideMenuBar": true,
+    "show": false
+  },
+  "security": {
+    "nodeIntegration": false,
+    "contextIsolation": true,
+    "enableRemoteModule": false
+  },
+  "development": {
+    "devTools": false,
+    "autoReload": false
+  }
+} 
