@@ -286,7 +286,7 @@
   top: 158.4px;
 }
 .text-suisse-24-in-active {
-  color: #7f8891;
+  color: #f5f6f6;
   text-align: left;
   font-family: "SuisseIntl-Regular", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   font-size: 26px;
@@ -297,7 +297,7 @@
   top: 234.6px;
 }
 .text-suisse-24-in-active2 {
-  color: #7f8891;
+  color: #f5f6f6;
   text-align: left;
   font-family: "SuisseIntl-Regular", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   font-size: 26px;
@@ -308,7 +308,7 @@
   top: 310.8px;
 }
 .text-suisse-24-in-active3 {
-  color: #7f8891;
+  color: #f5f6f6;
   text-align: left;
   font-family: "SuisseIntl-Regular", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   font-size: 26px;
@@ -367,7 +367,8 @@
   right: 0px;
   top: 149.4px;
 }
-.label-successfull4 {
+
+.label-successfull-unchecked-1 {
   background: #34c759;
   border-radius: 8px;
   padding: 12px 24px 12px 24px;
@@ -380,6 +381,106 @@
   right: 0px;
   top: 225.6px;
 }
+.label-successfull-unchecked-2 {
+  background: #34c759;
+  border-radius: 8px;
+  padding: 12px 24px 12px 24px;
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  align-items: center;
+  justify-content: flex-start;
+  position: absolute;
+  right: 0px;
+  top: 301.8px;
+}
+.label-successfull-unchecked-3 {
+  background: #34c759;
+  border-radius: 8px;
+  padding: 12px 24px 12px 24px;
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  align-items: center;
+  justify-content: flex-start;
+  position: absolute;
+  right: 0px;
+  top: 378px;
+}
+/* Progress state classes */
+.progress-state-inactive .ellipse-1 {
+  opacity: 0 !important;
+}
+.progress-state-inactive .label-successfull,
+.progress-state-inactive .label-successfull2,
+.progress-state-inactive .label-successfull3,
+.progress-state-inactive .label-successfull-unchecked-1,
+.progress-state-inactive .label-successfull-unchecked-2,
+.progress-state-inactive .label-successfull-unchecked-3 {
+  opacity: 0 !important;
+}
+.progress-state-inactive .text-suisse-24-active,
+.progress-state-inactive .text-suisse-24-active2,
+.progress-state-inactive .text-suisse-24-active3,
+.progress-state-inactive .text-suisse-24-in-active,
+.progress-state-inactive .text-suisse-24-in-active2,
+.progress-state-inactive .text-suisse-24-in-active3 {
+  color: #7f8891 !important;
+}
+
+.progress-state-active .ellipse-1 {
+  opacity: 1 !important;
+}
+.progress-state-active .label-successfull,
+.progress-state-active .label-successfull2,
+.progress-state-active .label-successfull3,
+.progress-state-active .label-successfull-unchecked-1,
+.progress-state-active .label-successfull-unchecked-2,
+.progress-state-active .label-successfull-unchecked-3 {
+  opacity: 0 !important;
+}
+.progress-state-active .text-suisse-24-active,
+.progress-state-active .text-suisse-24-active2,
+.progress-state-active .text-suisse-24-active3,
+.progress-state-active .text-suisse-24-in-active,
+.progress-state-active .text-suisse-24-in-active2,
+.progress-state-active .text-suisse-24-in-active3 {
+  color: #f5f6f6 !important;
+}
+
+.progress-state-done .ellipse-1 {
+  opacity: 1 !important;
+}
+.progress-state-done .label-successfull,
+.progress-state-done .label-successfull2,
+.progress-state-done .label-successfull3,
+.progress-state-done .label-successfull-unchecked-1,
+.progress-state-done .label-successfull-unchecked-2,
+.progress-state-done .label-successfull-unchecked-3 {
+  opacity: 1 !important;
+}
+.progress-state-done .text-suisse-24-active,
+.progress-state-done .text-suisse-24-active2,
+.progress-state-done .text-suisse-24-active3,
+.progress-state-done .text-suisse-24-in-active,
+.progress-state-done .text-suisse-24-in-active2,
+.progress-state-done .text-suisse-24-in-active3 {
+  color: #f5f6f6 !important;
+}
+
+/* Legacy toggle states (keep for compatibility) */
+.ellipse-hidden {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+.label-hidden {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+.text-grayed-out {
+  color: #7f8891 !important;
+}
+
 .progress-bar-vertical-connector {
   background: #3e424e;
   opacity: 0.6;
@@ -530,6 +631,17 @@
   top: 2.25px;
   overflow: visible;
   aspect-ratio: 1;
+  animation: spin 2s linear infinite;
+}
+
+/* Spinner animation keyframes */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 .home-cycle-progress-text {
   color: #ffffff;
@@ -635,6 +747,28 @@
   left: 20px;
   top: 156px;
   box-shadow: inset 1px 3px 1px 0px rgba(111, 138, 190, 0.5);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.toggle-switch-red {
+  background: #cc2c2c;
+  border-radius: 100px;
+  border-style: solid;
+  border-color: #5b5050;
+  border-width: 0.7px;
+  padding: 4px 32px 4px 4px;
+  display: flex;
+  flex-direction: row;
+  gap: 24px;
+  align-items: center;
+  justify-content: flex-start;
+  position: absolute;
+  left: 20px;
+  top: 156px;
+  box-shadow: inset 1px 3px 1px 0px rgba(190, 111, 111, 0.5);
+  cursor: pointer;
+  transition: all 0.3s ease;
 }
 .frame8 {
   background: #264882;
@@ -770,75 +904,70 @@
   height: 24px;
   position: relative;
 }
-.progress-bar-active-fill-1 {
-  background: #ff9900;
-  border-radius: 16px;
-  align-self: stretch;
-  flex: 1;
+/* Common progress bar fill element styles */
+.progress-bar-active-fill-1,
+.progress-bar-active-fill-2,
+.progress-bar-active-fill-3,
+.progress-bar-active-fill-4,
+.progress-bar-active-fill-5,
+.progress-bar-active-fill-6,
+.progress-bar-active-fill-7,
+.progress-bar-active-fill-8,
+.progress-bar-active-fill-9,
+.progress-bar-active-fill-10,
+.progress-bar-in-active-fill-1,
+.progress-bar-in-active-fill-2,
+.progress-bar-in-active-fill-3,
+.progress-bar-in-active-fill-4,
+.progress-bar-in-active-fill-5,
+.progress-bar-in-active-fill-6,
+.progress-bar-in-active-fill-7,
+.progress-bar-in-active-fill-8,
+.progress-bar-in-active-fill-9,
+.progress-bar-in-active-fill-10 {
+  border-radius: 8px;
+  width: 44px;
+  height: 14px;
   position: relative;
+  flex-shrink: 0;
 }
+
+/* Progress bar fill elements - Active state */
+.progress-bar-active-fill-1,
 .progress-bar-active-fill-2 {
   background: #ff9900;
-  border-radius: 16px;
-  align-self: stretch;
-  flex: 1;
-  position: relative;
 }
+
 .progress-bar-active-fill-3 {
   background: rgba(255, 153, 0, 0.9);
-  border-radius: 16px;
-  align-self: stretch;
-  flex: 1;
-  position: relative;
 }
+
 .progress-bar-active-fill-4 {
   background: rgba(255, 153, 0, 0.8);
-  border-radius: 16px;
-  align-self: stretch;
-  flex: 1;
-  position: relative;
 }
+
 .progress-bar-active-fill-5 {
   background: rgba(255, 153, 0, 0.7);
-  border-radius: 16px;
-  align-self: stretch;
-  flex: 1;
-  position: relative;
 }
+
 .progress-bar-active-fill-6 {
   background: rgba(255, 153, 0, 0.6);
-  border-radius: 16px;
-  align-self: stretch;
-  flex: 1;
-  position: relative;
 }
+
 .progress-bar-active-fill-7 {
   background: rgba(255, 153, 0, 0.5);
-  border-radius: 16px;
-  align-self: stretch;
-  flex: 1;
-  position: relative;
 }
+
 .progress-bar-active-fill-8 {
   background: rgba(255, 153, 0, 0.4);
-  border-radius: 16px;
-  align-self: stretch;
-  flex: 1;
-  position: relative;
 }
+
 .progress-bar-active-fill-9 {
   background: rgba(255, 153, 0, 0.3);
-  border-radius: 16px;
-  align-self: stretch;
-  flex: 1;
-  position: relative;
 }
+
 .progress-bar-active-fill-10 {
   background: rgba(255, 153, 0, 0.2);
-  border-radius: 16px;
-  align-self: stretch;
-  flex: 1;
-  position: relative;
 }
 .label-active {
   background: #24262a;
@@ -956,75 +1085,42 @@
   height: 24px;
   position: relative;
 }
-.progress-bar-in-active-fill-1 {
-  background: #3b4046;
-  border-radius: 16px;
-  align-self: stretch;
-  flex: 1;
-  position: relative;
-}
+/* Progress bar fill elements - Inactive state */
+.progress-bar-in-active-fill-1,
 .progress-bar-in-active-fill-2 {
   background: #3b4046;
-  border-radius: 16px;
-  align-self: stretch;
-  flex: 1;
-  position: relative;
 }
+
 .progress-bar-in-active-fill-3 {
   background: rgba(59, 64, 70, 0.9);
-  border-radius: 16px;
-  align-self: stretch;
-  flex: 1;
-  position: relative;
 }
+
 .progress-bar-in-active-fill-4 {
   background: rgba(59, 64, 70, 0.8);
-  border-radius: 16px;
-  align-self: stretch;
-  flex: 1;
-  position: relative;
 }
+
 .progress-bar-in-active-fill-5 {
   background: rgba(59, 64, 70, 0.7);
-  border-radius: 16px;
-  align-self: stretch;
-  flex: 1;
-  position: relative;
 }
+
 .progress-bar-in-active-fill-6 {
   background: rgba(59, 64, 70, 0.6);
-  border-radius: 16px;
-  align-self: stretch;
-  flex: 1;
-  position: relative;
 }
+
 .progress-bar-in-active-fill-7 {
   background: rgba(59, 64, 70, 0.5);
-  border-radius: 16px;
-  align-self: stretch;
-  flex: 1;
-  position: relative;
 }
+
 .progress-bar-in-active-fill-8 {
   background: rgba(59, 64, 70, 0.4);
-  border-radius: 16px;
-  align-self: stretch;
-  flex: 1;
-  position: relative;
 }
+
 .progress-bar-in-active-fill-9 {
   background: rgba(59, 64, 70, 0.3);
-  border-radius: 16px;
-  align-self: stretch;
-  flex: 1;
-  position: relative;
 }
+
 .progress-bar-in-active-fill-10 {
   background: rgba(59, 64, 70, 0.2);
-  border-radius: 16px;
-  align-self: stretch;
-  flex: 1;
-  position: relative;
 }
 .label-in-active {
   background: #25272a;

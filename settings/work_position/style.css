@@ -257,6 +257,24 @@
     0px 0px 12px 0px rgba(102, 124, 162, 0.42),
     inset 0px 4px 4px 0px rgba(102, 124, 162, 1);
   overflow: hidden;
+  cursor: pointer;
+  transition: all 0.1s ease;
+}
+
+.button-work-position-up:hover {
+  background: #3570d5;
+  box-shadow: inset 4px 0px 24px 0px rgba(55, 58, 65, 1),
+    0px 0px 16px 0px rgba(102, 124, 162, 0.6),
+    inset 0px 4px 4px 0px rgba(102, 124, 162, 1);
+}
+
+.button-work-position-up:active,
+.button-work-position-up.pressed {
+  background: #1e4fa0;
+  box-shadow: inset 4px 0px 32px 0px rgba(55, 58, 65, 1),
+    0px 0px 4px 0px rgba(102, 124, 162, 0.3),
+    inset 0px 4px 8px 0px rgba(0, 0, 0, 0.5);
+  transform: scale(0.98);
 }
 .rectangle-43 {
   display: none;
@@ -285,6 +303,24 @@
     inset 0px 4px 24px 0px rgba(55, 58, 65, 1),
     inset 0px -4px 4px 0px rgba(102, 124, 162, 1);
   overflow: hidden;
+  cursor: pointer;
+  transition: all 0.1s ease;
+}
+
+.button-work-position-down:hover {
+  background: #3570d5;
+  box-shadow: 0px 0px 16px 0px rgba(49, 51, 56, 0.5),
+    inset 0px 4px 24px 0px rgba(55, 58, 65, 1),
+    inset 0px -4px 4px 0px rgba(102, 124, 162, 1);
+}
+
+.button-work-position-down:active,
+.button-work-position-down.pressed {
+  background: #1e4fa0;
+  box-shadow: 0px 0px 4px 0px rgba(49, 51, 56, 0.3),
+    inset 0px 4px 32px 0px rgba(55, 58, 65, 1),
+    inset 0px -4px 8px 0px rgba(0, 0, 0, 0.5);
+  transform: scale(0.98);
 }
 .rectangle-44 {
   display: none;

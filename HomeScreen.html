@@ -2,13 +2,13 @@
   <div class="navigation-bar-vertical">
     <div class="button-home-active">
       <div class="icon">
-        <img class="icon-home-active" src="icon-home-active0.svg" />
+        <img class="icon-home-active" src="assets/icon-home-active0.svg" />
       </div>
     </div>
     <div class="frame">
       <div class="button-control-in-active" onclick="navigateToPage('./settings/work_position/index.html')">
         <div class="icon">
-          <img class="icon-control-inactive" src="icon-control-inactive0.svg" />
+          <img class="icon-control-inactive" src="assets/icon-control-inactive0.svg" />
         </div>
         <div class="image"></div>
       </div>
@@ -17,7 +17,7 @@
         <div class="button-settings-icon">
           <img
             class="icon-settings-inactive"
-            src="icon-settings-inactive0.svg"
+            src="assets/icon-settings-inactive0.svg"
           />
         </div>
       </div>
@@ -27,12 +27,12 @@
     <div class="home-banner">
       <div class="frame2">
         <div class="frame3">
-          <img class="icon-attention" src="icon-attention0.svg" />
+          <img class="icon-attention" src="assets/icon-attention0.svg" />
         </div>
-        <div class="home-banner-text">System Is Ready</div>
+        <div class="home-banner-text" id="home-banner-text">System Is Ready</div>
       </div>
       <div class="icon-cross">
-        <img class="icon-cross2" src="icon-cross1.svg" />
+        <img class="icon-cross2" src="assets/icon-cross1.svg" />
       </div>
     </div>
     <div class="home-cycle-progress">
@@ -52,6 +52,15 @@
         <div class="label-successfull3">
           <div class="text-suisse-20">Successful</div>
         </div>
+        <div class="label-successfull-unchecked-1">
+          <div class="text-suisse-20">Successful</div>
+        </div>
+        <div class="label-successfull-unchecked-2">
+          <div class="text-suisse-20">Successful</div>
+        </div>
+        <div class="label-successfull-unchecked-3">
+          <div class="text-suisse-20">Successful</div>
+        </div>
         <div class="progress-bar-vertical-connector"></div>
         <div class="progress-bar-vertical">
           <div class="progress-bar-vertical-check-1" style="right: 0px;left: 36px;">
@@ -63,17 +72,23 @@
           <div class="progress-bar-vertical-check-3" style="right: 0px;left: 36px;">
             <div class="ellipse-1"></div>
           </div>
-          <div class="progress-bar-vertical-un-check-1" style="right: 0px;left: 36px;"></div>
-          <div class="progress-bar-vertical-un-check-2" style="right: 0px;left: 36px;"></div>
-          <div class="progress-bar-vertical-un-check-3" style="right: 0px;left: 36px;"></div>
+          <div class="progress-bar-vertical-un-check-1" style="right: 0px;left: 36px;">
+            <div class="ellipse-1"></div>
+          </div>
+          <div class="progress-bar-vertical-un-check-2" style="right: 0px;left: 36px;">
+            <div class="ellipse-1"></div>
+          </div>
+          <div class="progress-bar-vertical-un-check-3" style="right: 0px;left: 36px;">
+            <div class="ellipse-1"></div>
+          </div>
         </div>
       </div>
       <div class="frame5">
         <div class="home-cycle-progress-status">
           <div class="spinner">
-            <img class="icon-spinner" src="icon-spinner0.svg" />
+            <img class="icon-spinner" src="assets/icon-spinner0.svg" />
           </div>
-          <div class="home-cycle-progress-text">Processing...</div>
+          <div class="home-cycle-progress-text" id="home-cycle-progress-text">Processing...</div>
         </div>
       </div>
       <div class="text-suisse-32">Cycle Progress</div>
@@ -81,32 +96,33 @@
     <div class="home-cycle-info">
       <div class="frame6">
         <div class="frame7">
-          <div class="home-text-percent">0%</div>
-          <div class="home-text-time">∼1m 46sec</div>
-        </div>
-        <div class="home-slider">
-          <div class="home-slider-circle"></div>
-        </div>
+                  <div class="home-text-percent" id="home-text-percent">0%</div>
+        <div class="home-text-time" id="home-text-time">∼1m 46sec</div>
       </div>
-      <div class="toggle-switch-blue">
+      <div class="home-slider" id="home-slider">
+        <div class="home-slider-circle" id="home-slider-circle"></div>
+      </div>
+      </div>
+      <div class="toggle-switch-blue" id="toggle-switch">
         <div class="frame8">
-          <img class="icon-white-square" src="icon-white-square0.svg" />
+          <img class="icon-white-square" src="assets/icon-white-square0.svg" />
         </div>
-        <div class="text-suisse-24">Stop</div>
+        <div class="text-suisse-24" id="toggle-text">Start</div>
       </div>
     </div>
-    <img class="logo" src="logo0.png" />
+    <img class="logo" src="assets/logo0.png" />
     <div class="home-tip-status">
       <div class="frame9">
+        <!-- Tip 1 -->
         <div class="tip-display-active">
           <div class="frame10">
             <div class="frame11">
               <div class="home-tip-joules-active">
-                <div class="text-suisse-322">0 J</div>
+                <div class="text-suisse-322" id="tip-1-joules-active">0 J</div>
               </div>
-              <div class="home-tip-distance-active">0 mm</div>
+              <div class="home-tip-distance-active" id="tip-1-distance-active">0 mm</div>
             </div>
-            <div class="progress-bar-active">
+            <div class="progress-bar-active" id="tip-1-progress-active">
               <div class="progress-bar-active-fill-1"></div>
               <div class="progress-bar-active-fill-2"></div>
               <div class="progress-bar-active-fill-3"></div>
@@ -127,15 +143,16 @@
             <div class="text-suisse-243">Active</div>
           </div>
         </div>
+        <!-- Tip 2 -->
         <div class="tip-display-active">
           <div class="frame10">
             <div class="frame11">
               <div class="home-tip-joules-active">
-                <div class="text-suisse-322">0 J</div>
+                <div class="text-suisse-322" id="tip-2-joules-active">0 J</div>
               </div>
-              <div class="home-tip-distance-active">0 mm</div>
+              <div class="home-tip-distance-active" id="tip-2-distance-active">0 mm</div>
             </div>
-            <div class="progress-bar-active">
+            <div class="progress-bar-active" id="tip-2-progress-active">
               <div class="progress-bar-active-fill-1"></div>
               <div class="progress-bar-active-fill-2"></div>
               <div class="progress-bar-active-fill-3"></div>
@@ -156,15 +173,16 @@
             <div class="text-suisse-243">Active</div>
           </div>
         </div>
+        <!-- Tip 3 -->
         <div class="tip-display-active">
           <div class="frame10">
             <div class="frame11">
               <div class="home-tip-joules-active">
-                <div class="text-suisse-322">0 J</div>
+                <div class="text-suisse-322" id="tip-3-joules-active">0 J</div>
               </div>
-              <div class="home-tip-distance-active">0 mm</div>
+              <div class="home-tip-distance-active" id="tip-3-distance-active">0 mm</div>
             </div>
-            <div class="progress-bar-active">
+            <div class="progress-bar-active" id="tip-3-progress-active">
               <div class="progress-bar-active-fill-1"></div>
               <div class="progress-bar-active-fill-2"></div>
               <div class="progress-bar-active-fill-3"></div>
@@ -185,15 +203,16 @@
             <div class="text-suisse-243">Active</div>
           </div>
         </div>
+        <!-- Tip 4 -->
         <div class="tip-display-active">
           <div class="frame10">
             <div class="frame11">
               <div class="home-tip-joules-active">
-                <div class="text-suisse-322">0 J</div>
+                <div class="text-suisse-322" id="tip-4-joules-active">0 J</div>
               </div>
-              <div class="home-tip-distance-active">0 mm</div>
+              <div class="home-tip-distance-active" id="tip-4-distance-active">0 mm</div>
             </div>
-            <div class="progress-bar-active">
+            <div class="progress-bar-active" id="tip-4-progress-active">
               <div class="progress-bar-active-fill-1"></div>
               <div class="progress-bar-active-fill-2"></div>
               <div class="progress-bar-active-fill-3"></div>
@@ -216,15 +235,16 @@
         </div>
       </div>
       <div class="frame9">
+        <!-- Tip 5 -->
         <div class="tip-display-in-active">
           <div class="frame10">
             <div class="frame11">
               <div class="home-tip-joules-in-active">
-                <div class="_0-j">0 J</div>
+                <div class="_0-j" id="tip-5-joules-in-active">0 J</div>
               </div>
-              <div class="home-tip-distance-in-active">0 mm</div>
+              <div class="home-tip-distance-in-active" id="tip-5-distance-in-active">0 mm</div>
             </div>
-            <div class="progress-bar-in-active">
+            <div class="progress-bar-in-active" id="tip-5-progress-in-active">
               <div class="progress-bar-in-active-fill-1"></div>
               <div class="progress-bar-in-active-fill-2"></div>
               <div class="progress-bar-in-active-fill-3"></div>
@@ -245,15 +265,16 @@
             <div class="text-suisse-243">Inactive</div>
           </div>
         </div>
+        <!-- Tip 6 -->
         <div class="tip-display-in-active">
           <div class="frame10">
             <div class="frame11">
               <div class="home-tip-joules-in-active">
-                <div class="_0-j">0 J</div>
+                <div class="_0-j" id="tip-6-joules-in-active">0 J</div>
               </div>
-              <div class="home-tip-distance-in-active">0 mm</div>
+              <div class="home-tip-distance-in-active" id="tip-6-distance-in-active">0 mm</div>
             </div>
-            <div class="progress-bar-in-active">
+            <div class="progress-bar-in-active" id="tip-6-progress-in-active">
               <div class="progress-bar-in-active-fill-1"></div>
               <div class="progress-bar-in-active-fill-2"></div>
               <div class="progress-bar-in-active-fill-3"></div>
@@ -274,15 +295,16 @@
             <div class="text-suisse-243">Inactive</div>
           </div>
         </div>
+        <!-- Tip 7 -->
         <div class="tip-display-in-active">
           <div class="frame10">
             <div class="frame11">
               <div class="home-tip-joules-in-active">
-                <div class="_0-j">0 J</div>
+                <div class="_0-j" id="tip-7-joules-in-active">0 J</div>
               </div>
-              <div class="home-tip-distance-in-active">0 mm</div>
+              <div class="home-tip-distance-in-active" id="tip-7-distance-in-active">0 mm</div>
             </div>
-            <div class="progress-bar-in-active">
+            <div class="progress-bar-in-active" id="tip-7-progress-in-active">
               <div class="progress-bar-in-active-fill-1"></div>
               <div class="progress-bar-in-active-fill-2"></div>
               <div class="progress-bar-in-active-fill-3"></div>
@@ -303,15 +325,16 @@
             <div class="text-suisse-243">Inactive</div>
           </div>
         </div>
+        <!-- Tip 8 -->
         <div class="tip-display-in-active">
           <div class="frame10">
             <div class="frame11">
               <div class="home-tip-joules-in-active">
-                <div class="_0-j">0 J</div>
+                <div class="_0-j" id="tip-8-joules-in-active">0 J</div>
               </div>
-              <div class="home-tip-distance-in-active">0 mm</div>
+              <div class="home-tip-distance-in-active" id="tip-8-distance-in-active">0 mm</div>
             </div>
-            <div class="progress-bar-in-active">
+            <div class="progress-bar-in-active" id="tip-8-progress-in-active">
               <div class="progress-bar-in-active-fill-1"></div>
               <div class="progress-bar-in-active-fill-2"></div>
               <div class="progress-bar-in-active-fill-3"></div>

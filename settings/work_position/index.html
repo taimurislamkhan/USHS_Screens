@@ -74,7 +74,7 @@
               <div class="current-position">Current Position</div>
             </div>
             <div class="frame-5">
-              <div class="current-position-text">0 mm</div>
+              <div class="current-position-text" id="current-position-text">0 mm</div>
             </div>
           </div>
           <div class="frame-1832">
@@ -100,7 +100,7 @@
               <div class="setpoint">Setpoint</div>
             </div>
             <div class="frame-5">
-              <div class="setpoint-text">0 mm</div>
+              <div class="setpoint-text" id="setpoint-text">0 mm</div>
             </div>
           </div>
         </div>
@@ -122,100 +122,100 @@
       </div>
       <div class="container-bg-tips-distance">
         <div class="container-tips-distance">
-          <div class="tip-slider-active">
+          <div class="tip-slider-active" id="tip-1-container">
             <div class="container-tip-led">
               <div class="tip-led-active"></div>
               <div class="tip-text-active">Tip 1</div>
             </div>
-            <div class="distance-slider-active">
+            <div class="distance-slider-active" id="tip-1-slider">
               <div class="slider-circle-active"></div>
             </div>
             <div class="slider-text-bg-active">
-              <div class="slider-text-active">0 mm</div>
+              <div class="slider-text-active" id="tip-1-distance-text">0 mm</div>
             </div>
           </div>
-          <div class="tip-slider-active">
+          <div class="tip-slider-active" id="tip-2-container">
             <div class="container-tip-led">
               <div class="tip-led-active"></div>
               <div class="tip-text-active">Tip 2</div>
             </div>
-            <div class="distance-slider-active">
+            <div class="distance-slider-active" id="tip-2-slider">
               <div class="slider-circle-active"></div>
             </div>
             <div class="slider-text-bg-active">
-              <div class="slider-text-active">0 mm</div>
+              <div class="slider-text-active" id="tip-2-distance-text">0 mm</div>
             </div>
           </div>
-          <div class="tip-slider-active">
+          <div class="tip-slider-active" id="tip-3-container">
             <div class="container-tip-led">
               <div class="tip-led-active"></div>
               <div class="tip-text-active">Tip 3</div>
             </div>
-            <div class="distance-slider-active">
+            <div class="distance-slider-active" id="tip-3-slider">
               <div class="slider-circle-active"></div>
             </div>
             <div class="slider-text-bg-active">
-              <div class="slider-text-active">0 mm</div>
+              <div class="slider-text-active" id="tip-3-distance-text">0 mm</div>
             </div>
           </div>
-          <div class="tip-slider-active">
+          <div class="tip-slider-active" id="tip-4-container">
             <div class="container-tip-led">
               <div class="tip-led-active"></div>
               <div class="tip-text-active">Tip 4</div>
             </div>
-            <div class="distance-slider-active">
+            <div class="distance-slider-active" id="tip-4-slider">
               <div class="slider-circle-active"></div>
             </div>
             <div class="slider-text-bg-active">
-              <div class="slider-text-active">0 mm</div>
+              <div class="slider-text-active" id="tip-4-distance-text">0 mm</div>
             </div>
           </div>
-          <div class="tip-slider-in-active">
+          <div class="tip-slider-in-active" id="tip-5-container">
             <div class="container-tip-led">
               <div class="tip-led-inactive"></div>
               <div class="tip-led-text-in-active">Tip 5</div>
             </div>
-            <div class="distance-slider-in-active">
+            <div class="distance-slider-in-active" id="tip-5-slider">
               <div class="slider-circle-in-active"></div>
             </div>
             <div class="slider-text-bg-active2">
-              <div class="slider-text-inactive">0 mm</div>
+              <div class="slider-text-inactive" id="tip-5-distance-text">0 mm</div>
             </div>
           </div>
-          <div class="tip-slider-in-active">
+          <div class="tip-slider-in-active" id="tip-6-container">
             <div class="container-tip-led">
               <div class="tip-led-inactive"></div>
               <div class="tip-led-text-in-active">Tip 6</div>
             </div>
-            <div class="distance-slider-in-active">
+            <div class="distance-slider-in-active" id="tip-6-slider">
               <div class="slider-circle-in-active"></div>
             </div>
             <div class="slider-text-bg-active2">
-              <div class="slider-text-inactive">0 mm</div>
+              <div class="slider-text-inactive" id="tip-6-distance-text">0 mm</div>
             </div>
           </div>
-          <div class="tip-slider-in-active">
+          <div class="tip-slider-in-active" id="tip-7-container">
             <div class="container-tip-led">
               <div class="tip-led-inactive"></div>
               <div class="tip-led-text-in-active">Tip 7</div>
             </div>
-            <div class="distance-slider-in-active">
+            <div class="distance-slider-in-active" id="tip-7-slider">
               <div class="slider-circle-in-active"></div>
             </div>
             <div class="slider-text-bg-active2">
-              <div class="slider-text-inactive">0 mm</div>
+              <div class="slider-text-inactive" id="tip-7-distance-text">0 mm</div>
             </div>
           </div>
-          <div class="tip-slider-in-active">
+          <div class="tip-slider-in-active" id="tip-8-container">
             <div class="container-tip-led">
               <div class="tip-led-inactive"></div>
               <div class="tip-led-text-in-active">Tip 8</div>
             </div>
-            <div class="distance-slider-in-active">
+            <div class="distance-slider-in-active" id="tip-8-slider">
               <div class="slider-circle-in-active"></div>
             </div>
             <div class="slider-text-bg-active2">
-              <div class="slider-text-inactive">0 mm</div>
+              <div class="slider-text-inactive" id="tip-8-distance-text">0 mm</div>
             </div>
           </div>
         </div>
@@ -250,8 +250,49 @@
       .button-control:hover, .button-home:hover, .button-settings:hover, .tab-inactive:hover {
         opacity: 0.8;
       }
+      .button-rapid-speed, .button-fine-speed, .button-work-position-up, .button-work-position-down, .button-set-work-position {
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+      .button-rapid-speed:hover, .button-fine-speed:hover {
+        transform: scale(1.02);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+      }
+      .button-work-position-up:hover, .button-work-position-down:hover {
+        opacity: 0.85;
+      }
+      .button-set-work-position:hover {
+        background: #3d4148;
+      }
+      
+      /* Improve button responsiveness */
+      .button-work-position-up, .button-work-position-down,
+      .button-rapid-speed, .button-fine-speed {
+        user-select: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        touch-action: manipulation;
+      }
+      
+      .button-work-position-up.pressed,
+      .button-work-position-down.pressed {
+        opacity: 0.7;
+        transform: scale(0.98);
+      }
+      
+      /* Prevent text selection on all buttons */
+      button, .button-home, .button-control, .button-settings {
+        user-select: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+      }
     `;
     document.head.appendChild(style);
   </script>
+  
+  <!-- Work Position Controller Script -->
+  <script src="work_position.js"></script>
 </body>
 </html>

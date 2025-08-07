@@ -43,9 +43,15 @@
   <div id="home-container"></div>
   
   <script>
-    // Global navigation function
+    // Global navigation function for Electron
     function navigateToPage(relativePath) {
-      window.location.href = relativePath;
+      if (window.electronAPI) {
+        // Use Electron API for navigation
+        window.electronAPI.navigateToPage(relativePath);
+      } else {
+        // Fallback for web browser
+        window.location.href = relativePath;
+      }
     }
 
     // Load HomeScreen.html content
@@ -54,7 +60,7 @@
       .then(html => {
         document.getElementById('home-container').innerHTML = html;
         
-        // Add click styling to navigation buttons
+        // Add click styling to navigation buttons and tip labels
         const style = document.createElement('style');
         style.textContent = `
           .button-control-in-active, .button-home, .button-settings-in-active {
@@ -64,13 +70,546 @@
           .button-control-in-active:hover, .button-home:hover, .button-settings-in-active:hover {
             opacity: 0.8;
           }
+          
+          .label-tip-active, .label-tip-in-active {
+            cursor: pointer;
+            transition: all 0.2s ease;
+          }
+          .label-tip-active:hover, .label-tip-in-active:hover {
+            opacity: 0.8;
+            transform: scale(1.02);
+          }
         `;
         document.head.appendChild(style);
+
+        // Progress state management
+        function updateProgressStates(states) {
+          const progressItems = ["home", "work_position", "encoder_zero", "heat", "cool", "cycle_complete"];
+          
+          progressItems.forEach((item, index) => {
+            const state = states[item] || 'inactive';
+            
+            // Get selectors for each element
+            const ellipseSelector = index < 3 ? 
+              '.progress-bar-vertical-check-' + (index + 1) + ' .ellipse-1' :
+              '.progress-bar-vertical-un-check-' + (index - 2) + ' .ellipse-1';
+            
+            const labelSelector = index < 3 ?
+              (index === 0 ? '.label-successfull' : '.label-successfull' + (index + 1)) :
+              '.label-successfull-unchecked-' + (index - 2);
+            
+            const textSelector = index < 3 ?
+              '.text-suisse-24-active' + (index === 0 ? '' : (index + 1)) :
+              '.text-suisse-24-in-active' + (index === 3 ? '' : (index - 3 + 1));
+            
+            const ellipse = document.querySelector(ellipseSelector);
+            const label = document.querySelector(labelSelector);
+            const textElement = document.querySelector(textSelector);
+            
+            if (ellipse && label && textElement) {
+              // Remove all legacy state classes
+              [ellipse, label, textElement].forEach(el => {
+                el.classList.remove('ellipse-hidden', 'label-hidden', 'text-grayed-out');
+              });
+              
+              // Apply state directly with inline styles for reliability
+              if (state === 'inactive') {
+                ellipse.style.opacity = '0';
+                label.style.opacity = '0';
+                textElement.style.color = '#7f8891';
+              } else if (state === 'active') {
+                ellipse.style.opacity = '1';
+                label.style.opacity = '0';
+                textElement.style.color = '#f5f6f6';
+              } else if (state === 'done') {
+                ellipse.style.opacity = '1';
+                label.style.opacity = '1';
+                textElement.style.color = '#f5f6f6';
+              }
+            }
+          });
+        }
+
+        // Legacy toggle functionality (keep for manual clicking)
+        function toggleProgressState(stateNumber) {
+          let ellipseSelector, labelSelector, textSelector;
+          
+          // Determine selectors based on state number
+          if (stateNumber <= 3) {
+            // Checked states (1-3)
+            ellipseSelector = '.progress-bar-vertical-check-' + stateNumber + ' .ellipse-1';
+            labelSelector = stateNumber === 1 ? '.label-successfull' : '.label-successfull' + stateNumber;
+            textSelector = '.text-suisse-24-active' + (stateNumber === 1 ? '' : stateNumber);
+          } else {
+            // Unchecked states (4-6)
+            const unCheckedNum = stateNumber - 3;
+            ellipseSelector = '.progress-bar-vertical-un-check-' + unCheckedNum + ' .ellipse-1';
+            labelSelector = '.label-successfull-unchecked-' + unCheckedNum;
+            textSelector = '.text-suisse-24-in-active' + (unCheckedNum === 1 ? '' : unCheckedNum);
+          }
+
+          const ellipse = document.querySelector(ellipseSelector);
+          const label = document.querySelector(labelSelector);
+          const textElement = document.querySelector(textSelector);
+
+          if (ellipse && label && textElement) {
+            const isHidden = ellipse.classList.contains('ellipse-hidden');
+            
+            if (isHidden) {
+              // Show ellipse and label, make text active
+              ellipse.classList.remove('ellipse-hidden');
+              label.classList.remove('label-hidden');
+              textElement.classList.remove('text-grayed-out');
+            } else {
+              // Hide ellipse and label, gray out text
+              ellipse.classList.add('ellipse-hidden');
+              label.classList.add('label-hidden');
+              textElement.classList.add('text-grayed-out');
+            }
+          }
+        }
+
+        // Create persistent clickable areas for labels
+        function createLabelClickArea(labelSelector, stateNumber) {
+          const label = document.querySelector(labelSelector);
+          if (!label) return;
+          
+          const clickArea = document.createElement('div');
+          clickArea.style.position = 'absolute';
+          clickArea.style.right = '0px';
+          clickArea.style.top = label.style.top || getComputedStyle(label).top;
+          clickArea.style.width = '150px'; // Wider than the label for easier clicking
+          clickArea.style.height = '42px'; // Height to cover the label
+          clickArea.style.cursor = 'pointer';
+          clickArea.style.zIndex = '1000';
+          clickArea.style.backgroundColor = 'transparent';
+          
+          clickArea.addEventListener('click', () => toggleProgressState(stateNumber));
+          
+          // Insert the click area into the same parent as the label
+          label.parentNode.insertBefore(clickArea, label);
+        }
+
+        // Add click event listeners for all progress states
+        // Checked states (1-3)
+        for (let i = 1; i <= 3; i++) {
+          const progressBarSelector = '.progress-bar-vertical-check-' + i;
+          const labelSelector = i === 1 ? '.label-successfull' : '.label-successfull' + i;
+          
+          const progressBar = document.querySelector(progressBarSelector);
+          
+          if (progressBar) {
+            progressBar.style.cursor = 'pointer';
+            progressBar.addEventListener('click', () => toggleProgressState(i));
+          }
+          
+          // Create persistent clickable area for label
+          createLabelClickArea(labelSelector, i);
+        }
+
+        // Unchecked states (4-6)
+        for (let i = 1; i <= 3; i++) {
+          const progressBarSelector = '.progress-bar-vertical-un-check-' + i;
+          const labelSelector = '.label-successfull-unchecked-' + i;
+          
+          const progressBar = document.querySelector(progressBarSelector);
+          
+          if (progressBar) {
+            progressBar.style.cursor = 'pointer';
+            progressBar.addEventListener('click', () => toggleProgressState(i + 3));
+          }
+          
+          // Create persistent clickable area for label
+          createLabelClickArea(labelSelector, i + 3);
+        }
+
+        // Add Electron-specific functionality
+        if (window.electronAPI) {
+          // Update window title with app info
+          window.electronAPI.getAppName().then(appName => {
+            document.title = appName;
+          });
+
+          // Add keyboard shortcuts
+          document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+              switch(e.key) {
+                case 'r':
+                  e.preventDefault();
+                  window.electronAPI.reload();
+                  break;
+                case 'q':
+                  e.preventDefault();
+                  window.electronAPI.close();
+                  break;
+              }
+            }
+          });
+
+                  // Listen for element update events from Python script
+        window.addEventListener('update-element', (event) => {
+          const { elementId, property, value } = event.detail;
+          const element = document.getElementById(elementId);
+          if (element) {
+            if (property === 'textContent') {
+              element.textContent = value;
+            } else if (property === 'value') {
+              element.value = value;
+            } else if (property === 'class') {
+              element.className = value;
+            } else if (property && property.startsWith('style.')) {
+              const styleProp = property.substring(6);
+              element.style[styleProp] = value;
+            }
+            console.log(`Updated element ${elementId}.${property} = ${value}`);
+          } else {
+            console.warn(`Element with id '${elementId}' not found`);
+          }
+        });
+
+          // Listen for progress bar update events from Python script
+          window.addEventListener('update-progress-bar', (event) => {
+            const { elementId, progress } = event.detail;
+            const progressBar = document.getElementById(elementId);
+            if (progressBar) {
+              // Get all fill elements
+              const fills = progressBar.querySelectorAll('[class*="progress-bar-active-fill"], [class*="progress-bar-in-active-fill"]');
+              
+              // Show/hide fill elements based on progress value
+              fills.forEach((fill, index) => {
+                if (index < progress) {
+                  fill.style.display = 'block';
+                } else {
+                  fill.style.display = 'none';
+                }
+              });
+              
+              console.log(`Updated progress bar ${elementId} to ${progress}/10`);
+            } else {
+              console.warn(`Progress bar with id '${elementId}' not found`);
+            }
+          });
+
+          // Listen for slider position update events from Python script
+          window.addEventListener('update-slider', (event) => {
+            const { position } = event.detail;
+            const sliderCircle = document.getElementById('home-slider-circle');
+            
+            if (sliderCircle) {
+              // Update the slider circle position with smooth animation
+              sliderCircle.style.left = `${position}px`;
+              sliderCircle.style.transition = 'left 0.3s ease';
+              console.log(`Updated slider position to ${position}px`);
+            } else {
+              console.warn('Slider circle element not found');
+            }
+          });
+        }
+
+
+
+
+
+        // Toggle switch functionality
+        let isRunning = false; // Start in stopped state
+        
+        function toggleSwitch() {
+          const toggleSwitch = document.getElementById('toggle-switch');
+          const toggleText = document.getElementById('toggle-text');
+          
+          isRunning = !isRunning;
+          
+          if (isRunning) {
+            // Switch to running state (red)
+            toggleSwitch.className = 'toggle-switch-red';
+            toggleText.textContent = 'Stop';
+            
+            // Send start command to Python script
+            if (window.electronAPI) {
+              window.electronAPI.sendToPython({
+                type: 'toggle_state',
+                state: 'start'
+              });
+            }
+          } else {
+            // Switch to stopped state (blue)
+            toggleSwitch.className = 'toggle-switch-blue';
+            toggleText.textContent = 'Start';
+            
+            // Send stop command to Python script
+            if (window.electronAPI) {
+              window.electronAPI.sendToPython({
+                type: 'toggle_state',
+                state: 'stop'
+              });
+            }
+          }
+        }
+
+        // Add click event listener to toggle switch
+        document.addEventListener('click', function(event) {
+          const toggleSwitchElement = event.target.closest('#toggle-switch');
+          if (toggleSwitchElement) {
+            toggleSwitch();
+          }
+        });
+
+        // Listen for progress states updates from Python script
+        window.addEventListener('update-progress-states', (event) => {
+          console.log('Received progress states update:', event.detail.states);
+          updateProgressStates(event.detail.states);
+        });
+
+        // Listen for progress text updates from Python script
+        window.addEventListener('update-progress-text', (event) => {
+          const progressTextElement = document.getElementById('home-cycle-progress-text');
+          if (progressTextElement) {
+            progressTextElement.textContent = event.detail.text;
+          }
+        });
+
+        // Listen for tip state updates from Python script
+        window.addEventListener('update-tip-state', (event) => {
+          const tipNumber = event.detail.tipNumber;
+          const isActive = event.detail.isActive;
+          
+          // Find the tip container
+          const tipContainers = document.querySelectorAll('.tip-display-active, .tip-display-in-active');
+          const tipContainer = Array.from(tipContainers).find(container => {
+            const numberElement = container.querySelector('.text-suisse-242, .text-suisse-244');
+            return numberElement && numberElement.textContent.trim() === tipNumber.toString();
+          });
+          
+          if (tipContainer) {
+            setTipState(tipContainer, isActive);
+          }
+        });
+
+        // Function to set tip state programmatically (from Python)
+        function setTipState(tipContainer, isActive) {
+          const currentlyActive = tipContainer.classList.contains('tip-display-active');
+          
+          if (isActive && !currentlyActive) {
+            // Switch to active
+            tipContainer.classList.remove('tip-display-in-active');
+            tipContainer.classList.add('tip-display-active');
+            
+            // Update label classes
+            const labelInactive = tipContainer.querySelector('.label-in-active');
+            const labelTipInactive = tipContainer.querySelector('.label-tip-in-active');
+            
+            if (labelInactive) {
+              labelInactive.classList.remove('label-in-active');
+              labelInactive.classList.add('label-active');
+            }
+            
+            if (labelTipInactive) {
+              labelTipInactive.classList.remove('label-tip-in-active');
+              labelTipInactive.classList.add('label-tip-active');
+            }
+            
+            // Update tip number text color
+            const tipNumberText = tipContainer.querySelector('.text-suisse-244');
+            if (tipNumberText) {
+              tipNumberText.classList.remove('text-suisse-244');
+              tipNumberText.classList.add('text-suisse-242');
+            }
+            
+            // Update text content
+            const inactiveText = tipContainer.querySelector('.label-tip-active .text-suisse-243');
+            if (inactiveText) {
+              inactiveText.textContent = 'Active';
+            }
+            
+            // Update ellipse
+            const ellipse2 = tipContainer.querySelector('.ellipse2');
+            if (ellipse2) {
+              ellipse2.classList.remove('ellipse2');
+              ellipse2.classList.add('ellipse');
+            }
+            
+            // Update joules and distance text colors
+            const joulesText = tipContainer.querySelector('._0-j');
+            const distanceText = tipContainer.querySelector('.home-tip-distance-in-active');
+            
+            if (joulesText) {
+              joulesText.classList.remove('_0-j');
+              joulesText.classList.add('text-suisse-322');
+            }
+            
+            if (distanceText) {
+              distanceText.classList.remove('home-tip-distance-in-active');
+              distanceText.classList.add('home-tip-distance-active');
+            }
+            
+            // Update progress bar
+            const progressBar = tipContainer.querySelector('.progress-bar-in-active');
+            if (progressBar) {
+              progressBar.classList.remove('progress-bar-in-active');
+              progressBar.classList.add('progress-bar-active');
+              
+              // Update all progress bar fill elements
+              const fills = progressBar.querySelectorAll('[class*="progress-bar-in-active-fill"]');
+              fills.forEach((fill, index) => {
+                const currentClass = fill.className;
+                const newClass = currentClass.replace('progress-bar-in-active-fill', 'progress-bar-active-fill');
+                fill.className = newClass;
+              });
+            }
+            
+          } else if (!isActive && currentlyActive) {
+            // Switch to inactive
+            tipContainer.classList.remove('tip-display-active');
+            tipContainer.classList.add('tip-display-in-active');
+            
+            // Update label classes
+            const labelActive = tipContainer.querySelector('.label-active');
+            const labelTipActive = tipContainer.querySelector('.label-tip-active');
+            
+            if (labelActive) {
+              labelActive.classList.remove('label-active');
+              labelActive.classList.add('label-in-active');
+            }
+            
+            if (labelTipActive) {
+              labelTipActive.classList.remove('label-tip-active');
+              labelTipActive.classList.add('label-tip-in-active');
+            }
+            
+            // Update tip number text color
+            const tipNumberText = tipContainer.querySelector('.text-suisse-242');
+            if (tipNumberText) {
+              tipNumberText.classList.remove('text-suisse-242');
+              tipNumberText.classList.add('text-suisse-244');
+            }
+            
+            // Update text content
+            const activeText = tipContainer.querySelector('.label-tip-in-active .text-suisse-243');
+            if (activeText) {
+              activeText.textContent = 'Inactive';
+            }
+            
+            // Update ellipse
+            const ellipse = tipContainer.querySelector('.ellipse');
+            if (ellipse) {
+              ellipse.classList.remove('ellipse');
+              ellipse.classList.add('ellipse2');
+            }
+            
+            // Update joules and distance text colors
+            const joulesText = tipContainer.querySelector('.text-suisse-322');
+            const distanceText = tipContainer.querySelector('.home-tip-distance-active');
+            
+            if (joulesText) {
+              joulesText.classList.remove('text-suisse-322');
+              joulesText.classList.add('_0-j');
+            }
+            
+            if (distanceText) {
+              distanceText.classList.remove('home-tip-distance-active');
+              distanceText.classList.add('home-tip-distance-in-active');
+            }
+            
+            // Update progress bar
+            const progressBar = tipContainer.querySelector('.progress-bar-active');
+            if (progressBar) {
+              progressBar.classList.remove('progress-bar-active');
+              progressBar.classList.add('progress-bar-in-active');
+              
+              // Update all progress bar fill elements
+              const fills = progressBar.querySelectorAll('[class*="progress-bar-active-fill"]');
+              fills.forEach((fill, index) => {
+                const currentClass = fill.className;
+                const newClass = currentClass.replace('progress-bar-active-fill', 'progress-bar-in-active-fill');
+                fill.className = newClass;
+              });
+            }
+          }
+        }
+        
+        // Request all current values from the Python script when page loads
+        // Use immediate execution if WebSocket is likely connected
+        requestAnimationFrame(() => {
+          if (window.electronAPI) {
+            window.electronAPI.sendToPython({
+              type: 'request_all_values'
+            });
+            console.log('Requested all values from Python script');
+          }
+        });
       })
       .catch(error => {
         console.error('Error loading HomeScreen.html:', error);
         document.getElementById('home-container').innerHTML = '<p style="color: red;">Error loading home screen content</p>';
       });
+      
+    // Listen for navigation back to home
+    window.addEventListener('page-navigated-home', () => {
+      console.log('Navigated back to home, requesting all values...');
+      if (window.electronAPI) {
+        window.electronAPI.sendToPython({
+          type: 'request_all_values'
+        });
+      }
+    });
+    
+    // Handle batch updates for instant page updates
+    window.addEventListener('batch-update', (event) => {
+      const updates = event.detail;
+      
+      // Use requestAnimationFrame to batch DOM updates
+      requestAnimationFrame(() => {
+        // Update all elements at once
+        if (updates.elements) {
+          Object.entries(updates.elements).forEach(([elementId, data]) => {
+            const element = document.getElementById(elementId);
+            if (element) {
+              if (data.property === 'textContent') {
+                element.textContent = data.value;
+              }
+            }
+          });
+        }
+        
+        // Update all progress bars at once
+        if (updates.progressBars) {
+          Object.entries(updates.progressBars).forEach(([elementId, progress]) => {
+            const progressBar = document.getElementById(elementId);
+            if (progressBar) {
+              const fills = progressBar.querySelectorAll('[class*="progress-bar-active-fill"], [class*="progress-bar-in-active-fill"]');
+              fills.forEach((fill, index) => {
+                const fillNumber = index + 1;
+                if (progress >= fillNumber * 20) {
+                  fill.style.display = 'block';
+                } else {
+                  fill.style.display = 'none';
+                }
+              });
+            }
+          });
+        }
+        
+        // Update progress states directly
+        if (updates.progressStates) {
+          updateProgressStates(updates.progressStates);
+        }
+        
+        // Update tip states directly
+        if (updates.tipStates) {
+          Object.entries(updates.tipStates).forEach(([tipNumber, isActive]) => {
+            const tipContainers = document.querySelectorAll('.tip-display-active, .tip-display-in-active');
+            const tipContainer = Array.from(tipContainers).find(container => {
+              const numberElement = container.querySelector('.text-suisse-242, .text-suisse-244');
+              return numberElement && numberElement.textContent.trim() === tipNumber.toString();
+            });
+            
+            if (tipContainer) {
+              setTipState(tipContainer, isActive);
+            }
+          });
+        }
+      });
+    });
   </script>
 </body>
 </html>
