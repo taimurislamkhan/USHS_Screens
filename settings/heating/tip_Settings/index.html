@@ -36,6 +36,7 @@
    }
    </style>
   <title>Document</title>
+  <script src="../../../preload.js"></script>
 </head>
 <body>
   <div class="settings-heating-tip-settings">
@@ -67,19 +68,19 @@
       </div>
     </div>
     <div class="frame-42">
-      <div class="frame-218">
+      <div class="frame-218" onclick="returnToTips()">
         <div class="button-return-tips">
           <img class="svg-repo-icon-carrier4" src="svg-repo-icon-carrier3.svg" />
         </div>
         <div class="return-to-tips">Return To Tips</div>
       </div>
-      <div class="tip-header">Tip 1 Settings</div>
+      <div class="tip-header" id="tip-header">Tip 1 Settings</div>
       <div class="frame-208">
         <div class="frame-6">
           <div class="energy">Energy</div>
           <div class="frame-215">
             <div class="frame-5">
-              <div class="energy-counter">0 J</div>
+              <div class="energy-counter" id="energy-counter">0 J</div>
             </div>
             <div class="frame-209">
               <div class="energy-count-minus">
@@ -101,7 +102,7 @@
           <div class="distance">distance</div>
           <div class="frame-215">
             <div class="frame-5">
-              <div class="distance-coutner">0 mm</div>
+              <div class="distance-coutner" id="distance-counter">0 mm</div>
             </div>
             <div class="frame-209">
               <div class="distance-count-minus">
@@ -124,7 +125,7 @@
         <div class="heat-start-delay">heat start delay</div>
         <div class="frame-196">
           <div class="frame-184">
-            <div class="heat-start-delay2">0 sec</div>
+            <div class="heat-start-delay2" id="heat-start-delay-counter">0 sec</div>
           </div>
           <div class="frame-1832">
             <div class="heat-start-delay-minus">
@@ -150,18 +151,293 @@
       </div>
     </div>
     <div class="frame-47">
-      <div class="frame-45">
+      <div class="frame-45" onclick="navigateToWorkPosition()">
         <div class="work-position-navbar">Work Position</div>
       </div>
       <div class="frame-44">
         <div class="heating">Heating</div>
       </div>
-      <div class="frame-472">
+      <div class="frame-472" onclick="navigateToConfiguration()">
         <div class="configuration-navbar">Configuration</div>
       </div>
     </div>
     <img class="logo" src="logo0.png" />
   </div>
+  
+  <script>
+    // Current values
+    let currentTip = 1;
+    let energyValue = 0;
+    let distanceValue = 0;
+    let heatStartDelayValue = 0;
+    
+    // Initialize the page
+    async function initializePage() {
+      // Get selected tip from localStorage
+      const selectedTip = localStorage.getItem('selectedTip');
+      if (selectedTip) {
+        currentTip = parseInt(selectedTip);
+        updateTipHeader();
+        await loadTipValues();
+      }
+    }
+    
+    // Update tip header
+    function updateTipHeader() {
+      const header = document.getElementById('tip-header');
+      header.textContent = `Tip ${currentTip} Settings`;
+    }
+    
+    // Load tip values from JSON
+    async function loadTipValues() {
+      try {
+        const response = await window.electronAPI.sendMessage('read_tip_states');
+        if (response && response.tipStates && response.tipStates[currentTip]) {
+          const tipData = response.tipStates[currentTip];
+          
+          energyValue = tipData.energy_setpoint || 0;
+          distanceValue = tipData.distance_setpoint || 0;
+          heatStartDelayValue = tipData.heat_start_delay || 0;
+          
+          updateDisplays();
+        }
+      } catch (error) {
+        console.error('Error loading tip values:', error);
+      }
+    }
+    
+    // Update all displays
+    function updateDisplays() {
+      document.getElementById('energy-counter').textContent = `${energyValue.toFixed(1)} J`;
+      document.getElementById('distance-counter').textContent = `${distanceValue.toFixed(1)} mm`;
+      document.getElementById('heat-start-delay-counter').textContent = `${heatStartDelayValue.toFixed(1)} sec`;
+    }
+    
+    // Adjust values
+    function adjustValue(type, delta) {
+      switch(type) {
+        case 'energy':
+          energyValue = Math.max(0, energyValue + delta);
+          break;
+        case 'distance':
+          distanceValue = Math.max(0, distanceValue + delta);
+          break;
+        case 'heat_start_delay':
+          heatStartDelayValue = Math.max(0, heatStartDelayValue + delta);
+          break;
+      }
+      updateDisplays();
+    }
+    
+    // Save current values and return to heating screen
+    async function returnToTips() {
+      await saveCurrentValues();
+      // Set timestamp to indicate we're returning from tip settings
+      localStorage.setItem('lastTipSettingsVisit', Date.now().toString());
+      window.location.href = '../index.html';
+    }
+    
+    // Save current values to JSON and Modbus
+    async function saveCurrentValues() {
+      try {
+        console.log(`Saving values for tip ${currentTip}: energy=${energyValue}, distance=${distanceValue}, heat_start_delay=${heatStartDelayValue}`);
+        
+        // Save energy setpoint
+        const energyResult = await window.electronAPI.sendMessage('update_heating_setpoint', {
+          tipNumber: currentTip,
+          type: 'energy',
+          value: energyValue
+        });
+        console.log('Energy save result:', energyResult);
+        
+        // Save distance setpoint
+        const distanceResult = await window.electronAPI.sendMessage('update_heating_setpoint', {
+          tipNumber: currentTip,
+          type: 'distance',
+          value: distanceValue
+        });
+        console.log('Distance save result:', distanceResult);
+        
+        // Save heat start delay setpoint
+        const heatDelayResult = await window.electronAPI.sendMessage('update_heating_setpoint', {
+          tipNumber: currentTip,
+          type: 'heat_start_delay',
+          value: heatStartDelayValue
+        });
+        console.log('Heat start delay save result:', heatDelayResult);
+        
+        // Add a small delay to ensure file write is complete
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Send to Python for Modbus writes
+        window.electronAPI.sendToPython({
+          type: 'update_heating_energy',
+          tipNumber: currentTip,
+          value: energyValue
+        });
+        
+        window.electronAPI.sendToPython({
+          type: 'update_heating_distance',
+          tipNumber: currentTip,
+          value: distanceValue
+        });
+        
+        window.electronAPI.sendToPython({
+          type: 'update_heating_heat_start_delay',
+          tipNumber: currentTip,
+          value: heatStartDelayValue
+        });
+        
+        console.log('All values saved successfully');
+        
+      } catch (error) {
+        console.error('Error saving tip values:', error);
+      }
+    }
+    
+    // Navigate to work position with current values saved
+    async function navigateToWorkPosition() {
+      await saveCurrentValues();
+      // Set timestamp to indicate we modified settings
+      localStorage.setItem('lastTipSettingsVisit', Date.now().toString());
+      window.location.href = '../../work_position/index.html';
+    }
+    
+    // Navigate to configuration with current values saved
+    async function navigateToConfiguration() {
+      await saveCurrentValues();
+      // Set timestamp to indicate we modified settings
+      localStorage.setItem('lastTipSettingsVisit', Date.now().toString());
+      window.location.href = '../../config/index.html';
+    }
+    
+    // Home button navigation (sidebar)
+    function navigateToHome() {
+      saveCurrentValues().then(() => {
+        window.location.href = '../../../index.html';
+      });
+    }
+    
+    // Manual controls navigation (sidebar)
+    function navigateToManualControls() {
+      saveCurrentValues().then(() => {
+        window.location.href = '../../../admin/manual_controls/index.html';
+      });
+    }
+    
+    // Add styles and event handlers
+    document.addEventListener('DOMContentLoaded', () => {
+      initializePage();
+      
+      // Add common sidebar click handlers
+      const homeButton = document.querySelector('.frame-180');
+      if (homeButton) {
+        homeButton.onclick = navigateToHome;
+      }
+      
+      const manualControlsButton = document.querySelector('.button-settings');
+      if (manualControlsButton) {
+        manualControlsButton.onclick = navigateToManualControls;
+      }
+      
+      // Add styling
+      const style = document.createElement('style');
+      style.textContent = `
+        /* Button hover and active animations */
+        .energy-count-minus, .energy-count-plus, 
+        .distance-count-minus, .distance-count-plus,
+        .heat-start-delay-minus, .heat-start-delay-plus,
+        .frame-218, .frame-45, .frame-472, .frame-180, .button-settings {
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+        
+        .energy-count-minus:hover, .energy-count-plus:hover, 
+        .distance-count-minus:hover, .distance-count-plus:hover,
+        .heat-start-delay-minus:hover, .heat-start-delay-plus:hover {
+          transform: scale(1.1);
+          opacity: 0.8;
+        }
+        
+        .energy-count-minus:active, .energy-count-plus:active, 
+        .distance-count-minus:active, .distance-count-plus:active,
+        .heat-start-delay-minus:active, .heat-start-delay-plus:active {
+          transform: scale(0.95);
+        }
+        
+        .frame-218:hover, .frame-45:hover, .frame-472:hover, 
+        .frame-180:hover, .button-settings:hover {
+          opacity: 0.8;
+        }
+        
+        .frame-218:active, .frame-45:active, .frame-472:active, 
+        .frame-180:active, .button-settings:active {
+          transform: scale(0.98);
+        }
+      `;
+      document.head.appendChild(style);
+
+      // Wire press-and-hold with acceleration for counters
+      const addHoldBehavior = (selector, type, step) => {
+        const el = document.querySelector(selector);
+        if (!el) return;
+
+        let holdTimeoutId = null;
+        let repeatIntervalId = null;
+        let holdBegan = false;
+        let currentIntervalMs = 200;
+        const minIntervalMs = 40;
+        const accelStepMs = 20;
+        const holdStartDelayMs = 350;
+
+        const clearTimers = () => {
+          if (holdTimeoutId) { clearTimeout(holdTimeoutId); holdTimeoutId = null; }
+          if (repeatIntervalId) { clearInterval(repeatIntervalId); repeatIntervalId = null; }
+        };
+
+        const stepOnce = () => {
+          adjustValue(type, step);
+          currentIntervalMs = Math.max(minIntervalMs, currentIntervalMs - accelStepMs);
+          clearInterval(repeatIntervalId);
+          repeatIntervalId = setInterval(stepOnce, currentIntervalMs);
+        };
+
+        const startHold = () => {
+          clearTimers();
+          holdBegan = false;
+          currentIntervalMs = 200;
+          holdTimeoutId = setTimeout(() => {
+            holdBegan = true;
+            stepOnce();
+          }, holdStartDelayMs);
+        };
+
+        const endHold = (e) => {
+          clearTimers();
+          if (holdBegan && e) { e.preventDefault(); e.stopPropagation(); }
+          setTimeout(() => { holdBegan = false; }, 0);
+        };
+
+        el.addEventListener('mousedown', startHold);
+        el.addEventListener('touchstart', startHold, { passive: true });
+        ['mouseup', 'mouseleave', 'touchend', 'touchcancel'].forEach(evt => {
+          el.addEventListener(evt, endHold, { passive: true });
+        });
+
+        el.addEventListener('click', (e) => {
+          if (holdBegan) { e.preventDefault(); e.stopPropagation(); holdBegan = false; return; }
+          adjustValue(type, step);
+        });
+      };
+
+      addHoldBehavior('.energy-count-minus', 'energy', -0.1);
+      addHoldBehavior('.energy-count-plus', 'energy', 0.1);
+      addHoldBehavior('.distance-count-minus', 'distance', -0.1);
+      addHoldBehavior('.distance-count-plus', 'distance', 0.1);
+      addHoldBehavior('.heat-start-delay-minus', 'heat_start_delay', -0.1);
+      addHoldBehavior('.heat-start-delay-plus', 'heat_start_delay', 0.1);
+    });
+  </script>
   
 </body>
 </html>

@@ -35,7 +35,7 @@
        padding: 0;
    }
    </style>
-  <title>Document</title>
+  <title>Configuration</title>
 </head>
 <body>
   <div class="settings-config">
@@ -256,19 +256,175 @@
     function navigateToPage(relativePath) {
       window.location.href = relativePath;
     }
-    
-    // Add click styling to navigation buttons
-    const style = document.createElement('style');
-    style.textContent = `
-      .tab-inactive, .button-home, .button-settings {
-        cursor: pointer;
-        transition: opacity 0.2s ease;
+
+    // IDs for value spans to update
+    const configIds = {
+      weld_time: '.weld-time2',
+      pulse_energy: '.pulse-energy2',
+      cool_time: '.cool-time2',
+      presence_height: '.presence-height2',
+      boss_tolerance_minus: '.frame-217 .frame-140 .boss-tolerance2',
+      boss_tolerance_plus: '.frame-217 .frame-141 .boss-tolerance2'
+    };
+
+    // Local state
+    const configState = {
+      weld_time: 0,
+      pulse_energy: 10,
+      cool_time: 0,
+      presence_height: 0,
+      boss_tolerance_minus: 0,
+      boss_tolerance_plus: 0
+    };
+
+    function updateDisplay() {
+      const weld = document.querySelector(configIds.weld_time);
+      if (weld) weld.textContent = `${configState.weld_time.toFixed(2)} sec`;
+
+      const pe = document.querySelector(configIds.pulse_energy);
+      if (pe) pe.textContent = `${configState.pulse_energy.toFixed(1)} J`;
+
+      const cool = document.querySelector(configIds.cool_time);
+      if (cool) cool.textContent = `${configState.cool_time.toFixed(2)} sec`;
+
+      const ph = document.querySelector(configIds.presence_height);
+      if (ph) ph.textContent = `${configState.presence_height.toFixed(3)} mm`;
+
+      // The two boss tolerance entries share class names; use nearest selectors already mapped
+      const btMinus = document.querySelector(configIds.boss_tolerance_minus);
+      if (btMinus) btMinus.textContent = `${configState.boss_tolerance_minus.toFixed(3)} mm`;
+
+      const btPlus = document.querySelector(configIds.boss_tolerance_plus);
+      if (btPlus) btPlus.textContent = `${configState.boss_tolerance_plus.toFixed(3)} mm`;
+    }
+
+    async function loadConfiguration() {
+      try {
+        const response = await window.electronAPI.sendMessage('read_configuration');
+        if (response && response.configuration) {
+          Object.assign(configState, response.configuration);
+          updateDisplay();
+        }
+      } catch (e) {
+        console.error('Error loading configuration:', e);
       }
-      .tab-inactive:hover, .button-home:hover, .button-settings:hover {
-        opacity: 0.8;
+    }
+
+    async function saveConfigKey(key) {
+      try {
+        await window.electronAPI.sendMessage('update_configuration', { key, value: configState[key] });
+        // Send to Python for Modbus write
+        window.electronAPI.sendToPython({ type: 'update_configuration', key, value: configState[key] });
+      } catch (e) {
+        console.error('Error saving configuration:', e);
       }
-    `;
-    document.head.appendChild(style);
+    }
+
+    function wireButton(selectorMinus, selectorPlus, key, step, min = -Infinity, max = Infinity) {
+      const minus = document.querySelector(selectorMinus);
+      const plus = document.querySelector(selectorPlus);
+
+      // Helper to apply change with clamping and update
+      const applyChange = (delta) => {
+        const next = Math.max(min, Math.min(max, (configState[key] + delta)));
+        if (next === configState[key]) return false;
+        configState[key] = next;
+        updateDisplay();
+        return true;
+      };
+
+      // Press-and-hold with acceleration
+      const addHoldBehavior = (el, deltaSign) => {
+        if (!el) return;
+
+        let holdTimeoutId = null;
+        let repeatIntervalId = null;
+        let holdBegan = false;
+        let currentIntervalMs = 200; // starting repeat interval
+        const minIntervalMs = 40;    // fastest repeat
+        const accelStepMs = 20;      // accelerate by reducing interval
+        const holdStartDelayMs = 350; // delay before repeats start
+
+        const clearTimers = () => {
+          if (holdTimeoutId) { clearTimeout(holdTimeoutId); holdTimeoutId = null; }
+          if (repeatIntervalId) { clearInterval(repeatIntervalId); repeatIntervalId = null; }
+        };
+
+        const stepOnce = () => {
+          const changed = applyChange(deltaSign * step);
+          // Save on every step; fire-and-forget
+          if (changed) { saveConfigKey(key); }
+          // accelerate
+          currentIntervalMs = Math.max(minIntervalMs, currentIntervalMs - accelStepMs);
+          clearInterval(repeatIntervalId);
+          repeatIntervalId = setInterval(stepOnce, currentIntervalMs);
+        };
+
+        const startHold = () => {
+          clearTimers();
+          holdBegan = false;
+          currentIntervalMs = 200;
+          holdTimeoutId = setTimeout(() => {
+            holdBegan = true;
+            // first repeat
+            stepOnce();
+          }, holdStartDelayMs);
+        };
+
+        const endHold = (e) => {
+          clearTimers();
+          if (holdBegan) {
+            // suppress the ensuing click after a hold
+            if (e) { e.preventDefault(); e.stopPropagation(); }
+            // reset flag shortly after to allow future clicks
+            setTimeout(() => { holdBegan = false; }, 0);
+          }
+        };
+
+        el.addEventListener('mousedown', startHold);
+        el.addEventListener('touchstart', startHold, { passive: true });
+        ['mouseup', 'mouseleave', 'touchend', 'touchcancel'].forEach(evt => {
+          el.addEventListener(evt, endHold, { passive: true });
+        });
+
+        // Normal click = single step
+        el.addEventListener('click', async (e) => {
+          if (holdBegan) { e.preventDefault(); e.stopPropagation(); holdBegan = false; return; }
+          if (applyChange(deltaSign * step)) {
+            await saveConfigKey(key);
+          }
+        });
+      };
+
+      addHoldBehavior(minus, -1);
+      addHoldBehavior(plus, +1);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      // Load saved config from JSON
+      loadConfiguration();
+
+      // Wire buttons with appropriate steps and bounds
+      wireButton('.weld-time-minus', '.weld-time-plus', 'weld_time', 0.01, 0, 999);
+      wireButton('.pulse-energy-minus', '.pulse-energy-plus', 'pulse_energy', 0.1, 0, 9999);
+      wireButton('.cool-time-minus', '.cool-time-plus', 'cool_time', 0.01, 0, 999);
+      wireButton('.presence-height-minus', '.presence-height-plus', 'presence_height', 0.001, 0, 9999);
+      wireButton('.frame-217 .frame-140 .boss-tolerance-minus', '.frame-217 .frame-140 .boss-tolerance-plus', 'boss_tolerance_minus', 0.001, -50, 50);
+      wireButton('.frame-217 .frame-141 .boss-tolerance-minus', '.frame-217 .frame-141 .boss-tolerance-plus', 'boss_tolerance_plus', 0.001, -50, 50);
+
+      // Add click styling to navigation buttons
+      const style = document.createElement('style');
+      style.textContent = `
+        .tab-inactive, .button-home, .button-settings {
+          cursor: pointer;
+          transition: opacity 0.2s ease;
+        }
+        .tab-inactive:hover, .button-home:hover, .button-settings:hover {
+          opacity: 0.8;
+        }
+      `;
+      document.head.appendChild(style);
+    });
   </script>
 </body>
 </html>

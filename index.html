@@ -43,13 +43,250 @@
   <div id="home-container"></div>
   
   <script>
-    // Global navigation function for Electron
+    // Session auth flag key
+    const AUTH_SESSION_KEY = 'ushs_screen_auth_ok';
+
+    // Determine whether a path requires authentication
+    function pathRequiresAuth(relativePath) {
+      const normalized = (relativePath || '').replace(/^\.\//, '');
+      // Guard the two sidebar destinations from the home screen
+      const protectedPaths = new Set([
+        'admin/manual_controls/index.html',
+        'settings/work_position/index.html'
+      ]);
+      return protectedPaths.has(normalized);
+    }
+
+    // Overlay password prompt
+    function showPasswordOverlay(onSuccess) {
+      // If already authenticated this session, short-circuit
+      if (sessionStorage.getItem(AUTH_SESSION_KEY) === '1') {
+        if (typeof onSuccess === 'function') onSuccess();
+        return;
+      }
+
+      // Remove any existing overlay
+      const existing = document.getElementById('password-overlay-root');
+      if (existing) existing.remove();
+
+      // Inject CSS specific to the overlay
+      if (!document.getElementById('password-vars-css')) {
+        const varsCss = document.createElement('link');
+        varsCss.id = 'password-vars-css';
+        varsCss.rel = 'stylesheet';
+        varsCss.href = 'settings/enter_password/vars.css';
+        document.head.appendChild(varsCss);
+      }
+      if (!document.getElementById('password-css')) {
+        const styleCss = document.createElement('link');
+        styleCss.id = 'password-css';
+        styleCss.rel = 'stylesheet';
+        styleCss.href = 'settings/enter_password/style.css';
+        document.head.appendChild(styleCss);
+      }
+
+      // Create container to host the overlay markup
+      const host = document.createElement('div');
+      host.id = 'password-overlay-root';
+      host.style.position = 'fixed';
+      host.style.inset = '0';
+      host.style.zIndex = '10000';
+      host.style.pointerEvents = 'none'; // let clicks pass through by default
+      document.body.appendChild(host);
+
+      // Add a class on the body and a style override to show Home button as unpressed
+      document.body.classList.add('password-overlay-open');
+      if (!document.getElementById('password-overlay-overrides')) {
+        const overrideStyle = document.createElement('style');
+        overrideStyle.id = 'password-overlay-overrides';
+        overrideStyle.textContent = `
+          .password-overlay-open .button-home-active {
+            background: #1e1f22 !important;
+            border-style: solid !important;
+            border-color: #313338 !important;
+            border-width: 2px 0 0 0 !important;
+            box-shadow: inset 4px 0px 24px 0px rgba(55, 58, 65, 1),
+                        0px 0px 12px 0px rgba(49, 51, 56, 0.42),
+                        inset 0px 4px 4px 0px rgba(70, 74, 83, 1) !important;
+          }
+          .password-overlay-open .button-home-active .icon-home-active {
+            opacity: 0.95;
+          }
+        `;
+        document.head.appendChild(overrideStyle);
+      }
+
+      fetch('settings/enter_password/SettingsEnterPassword.html?t=' + new Date().getTime())
+        .then(r => r.text())
+        .then(html => {
+          host.innerHTML = html;
+
+          // Mark overlay open and expose global dismiss
+          window.isPasswordOverlayOpen = true;
+
+          const overlayRoot = host.querySelector('.settings-enter-password');
+          if (overlayRoot) {
+            // Ensure it covers the viewport as an overlay
+            overlayRoot.style.position = 'fixed';
+            overlayRoot.style.inset = '0';
+            overlayRoot.style.width = '100vw';
+            overlayRoot.style.height = '100vh';
+            overlayRoot.style.borderRadius = '0';
+            // Make the root transparent and let clicks pass through by default
+            overlayRoot.style.background = 'transparent';
+            overlayRoot.style.pointerEvents = 'none';
+          }
+
+          // Configure the blurred/tinted backdrop to exclude the left sidebar
+          const backdrop = host.querySelector('.frame-203');
+          if (backdrop) {
+            backdrop.style.position = 'fixed';
+            backdrop.style.left = '170px'; // do not cover the 170px sidebar area
+            backdrop.style.right = '0';
+            backdrop.style.top = '0';
+            backdrop.style.bottom = '0';
+            backdrop.style.width = 'auto';
+            backdrop.style.height = 'auto';
+            backdrop.style.borderRadius = '0';
+            backdrop.style.background = 'rgba(22, 24, 29, 0.55)';
+            backdrop.style.backdropFilter = 'blur(10px) saturate(120%)';
+            backdrop.style.webkitBackdropFilter = 'blur(10px) saturate(120%)';
+            backdrop.style.pointerEvents = 'auto'; // capture clicks on the blurred area
+            backdrop.style.zIndex = '10000';
+          }
+
+          const panel = host.querySelector('.frame-124');
+          const display = host.querySelector('.password-text');
+          let inputDigits = '';
+
+          // Make the panel interactive and above the backdrop
+          if (panel) {
+            panel.style.pointerEvents = 'auto';
+            panel.style.zIndex = '10001';
+          }
+
+          // Error label
+          const errorEl = document.createElement('div');
+          errorEl.id = 'password-error';
+          errorEl.textContent = '';
+          errorEl.style.position = 'absolute';
+          errorEl.style.left = '40px';
+          errorEl.style.top = '275px';
+          errorEl.style.color = '#ff6b6b';
+          errorEl.style.fontFamily = 'SuisseIntl-Medium, Arial, sans-serif';
+          errorEl.style.fontSize = '20px';
+          if (panel) panel.appendChild(errorEl);
+
+          function updateDisplay() {
+            if (display) display.textContent = inputDigits.split('').map(() => '*').join(' ');
+          }
+          function resetInput(showError) {
+            if (showError) {
+              errorEl.textContent = 'Wrong password';
+              setTimeout(() => {
+                errorEl.textContent = '';
+              }, 1500);
+            }
+            inputDigits = '';
+            updateDisplay();
+          }
+          function cleanupOverlay() {
+            const css1 = document.getElementById('password-css');
+            const css2 = document.getElementById('password-vars-css');
+            const override = document.getElementById('password-overlay-overrides');
+            document.body.classList.remove('password-overlay-open');
+            if (override) override.parentNode && override.parentNode.removeChild(override);
+            if (host && host.parentNode) host.parentNode.removeChild(host);
+            if (css1) css1.parentNode && css1.parentNode.removeChild(css1);
+            if (css2) css2.parentNode && css2.parentNode.removeChild(css2);
+            window.isPasswordOverlayOpen = false;
+            window.dismissPasswordOverlay = undefined;
+          }
+
+          // Expose dismiss function so the Home button can close the overlay
+          window.dismissPasswordOverlay = cleanupOverlay;
+
+          function handleComplete() {
+            if (inputDigits === '1379') {
+              sessionStorage.setItem(AUTH_SESSION_KEY, '1');
+              cleanupOverlay();
+              if (typeof onSuccess === 'function') onSuccess();
+            } else {
+              resetInput(true);
+            }
+          }
+
+          // Register keypad listeners
+          const numberSelectors = ['.number-0','.number-1','.number-2','.number-3','.number-4','.number-5','.number-6','.number-7','.number-8','.number-9'];
+          numberSelectors.forEach(sel => {
+            const el = host.querySelector(sel);
+            if (!el) return;
+            el.addEventListener('click', () => {
+              if (inputDigits.length >= 4) return;
+              const digit = el.textContent.trim();
+              if (!/^[0-9]$/.test(digit)) return;
+              inputDigits += digit;
+              updateDisplay();
+              if (inputDigits.length === 4) {
+                handleComplete();
+              }
+            });
+          });
+
+          const backspace = host.querySelector('.back-space');
+          if (backspace) {
+            backspace.addEventListener('click', () => {
+              if (inputDigits.length === 0) return;
+              inputDigits = inputDigits.slice(0, -1);
+              updateDisplay();
+            });
+          }
+
+          // Initialize with empty display
+          updateDisplay();
+        })
+        .catch(err => {
+          console.error('Failed to load password overlay:', err);
+          // If overlay cannot load, fail open to avoid locking the UI
+          if (typeof onSuccess === 'function') onSuccess();
+        });
+    }
+
+    // Global navigation function for Electron with auth gating
     function navigateToPage(relativePath) {
+      const normalized = (relativePath || '').replace(/^[.][/]/, '').replace(/^\.\//, '');
+      // If navigating to home, always allow and dismiss any overlays
+      const isHome = normalized === '' || normalized === 'index.html' || normalized === 'index_new.html';
+      if (isHome) {
+        if (typeof window.dismissPasswordOverlay === 'function') {
+          try { window.dismissPasswordOverlay(); } catch (e) {}
+        }
+        if (window.electronAPI) {
+          window.electronAPI.navigateToPage('index.html');
+        } else {
+          window.location.href = 'index.html';
+        }
+        return;
+      }
+
+      const requiresAuth = pathRequiresAuth(relativePath);
+      const isAuthed = sessionStorage.getItem(AUTH_SESSION_KEY) === '1';
+
+      if (requiresAuth && !isAuthed) {
+        // Show password overlay; on success proceed to the requested path
+        showPasswordOverlay(() => {
+          if (window.electronAPI) {
+            window.electronAPI.navigateToPage(relativePath);
+          } else {
+            window.location.href = relativePath;
+          }
+        });
+        return;
+      }
+
       if (window.electronAPI) {
-        // Use Electron API for navigation
         window.electronAPI.navigateToPage(relativePath);
       } else {
-        // Fallback for web browser
         window.location.href = relativePath;
       }
     }
@@ -527,6 +764,28 @@
           }
         }
         
+        // Initialize tip states from JSON file
+        if (window.electronAPI) {
+          window.electronAPI.sendMessage('read_tip_states').then(response => {
+            if (response && response.tipStates) {
+              // Apply initial tip states
+              Object.entries(response.tipStates).forEach(([tipNumber, tipData]) => {
+                const tipContainers = document.querySelectorAll('.tip-display-active, .tip-display-in-active');
+                const tipContainer = Array.from(tipContainers).find(container => {
+                  const numberElement = container.querySelector('.text-suisse-242, .text-suisse-244');
+                  return numberElement && numberElement.textContent.trim() === tipNumber.toString();
+                });
+                
+                if (tipContainer) {
+                  setTipState(tipContainer, tipData.active);
+                }
+              });
+            }
+          }).catch(error => {
+            console.error('Error loading tip states:', error);
+          });
+        }
+        
         // Request all current values from the Python script when page loads
         // Use immediate execution if WebSocket is likely connected
         requestAnimationFrame(() => {
@@ -546,10 +805,30 @@
     // Listen for navigation back to home
     window.addEventListener('page-navigated-home', () => {
       console.log('Navigated back to home, requesting all values...');
+      // Ensure any password overlay is dismissed when landing on home
+      if (typeof window.dismissPasswordOverlay === 'function') {
+        try { window.dismissPasswordOverlay(); } catch (e) {}
+      }
       if (window.electronAPI) {
         window.electronAPI.sendToPython({
           type: 'request_all_values'
         });
+      }
+    });
+    
+    // Listen for tip state changes from heating screen
+    window.addEventListener('tip-state-changed', (event) => {
+      const { tipNumber, active } = event.detail;
+      
+      // Find and update the tip container
+      const tipContainers = document.querySelectorAll('.tip-display-active, .tip-display-in-active');
+      const tipContainer = Array.from(tipContainers).find(container => {
+        const numberElement = container.querySelector('.text-suisse-242, .text-suisse-244');
+        return numberElement && numberElement.textContent.trim() === tipNumber.toString();
+      });
+      
+      if (tipContainer) {
+        setTipState(tipContainer, active);
       }
     });
     

@@ -115,16 +115,16 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# Give ports time to stabilize
-sleep 2
+# Give ports a brief moment to stabilize (setup script already waits)
+sleep 0.5
 
 # Step 2: Start Electron app
 print_info "Starting Electron app..."
 npm start &
 ELECTRON_PID=$!
 
-# Wait for Electron to start
-sleep 3
+# Brief pause, then verify Electron is running
+sleep 1
 
 # Check if Electron started successfully
 if ! ps -p $ELECTRON_PID > /dev/null; then
@@ -139,8 +139,8 @@ print_info "Starting Modbus slave GUI..."
 ./venv/bin/python3 python/modbus_slave_gui.py &
 SLAVE_PID=$!
 
-# Wait for slave to start
-sleep 2
+# Brief pause to allow GUI to initialize
+sleep 0.5
 
 # Check if slave started successfully
 if ! ps -p $SLAVE_PID > /dev/null; then
@@ -150,11 +150,19 @@ fi
 
 print_success "Modbus slave GUI started (PID: $SLAVE_PID)"
 
-# Step 4: Wait a bit for user to configure and start the slave
-print_warning "Please configure and start the Modbus slave in the GUI"
-print_warning "Default settings should work. Just click 'Start Server'"
-print_info "Waiting 10 seconds for slave configuration..."
-sleep 10
+# Step 4: Wait until WebSocket is ready instead of fixed delay
+print_info "Waiting for WebSocket server (Electron) to accept connections..."
+WS_READY=0
+for i in {1..30}; do
+    # Use bash /dev/tcp to test TCP port 8080
+    (echo > /dev/tcp/127.0.0.1/8080) >/dev/null 2>&1 && { WS_READY=1; break; }
+    sleep 0.2
+done
+if [ $WS_READY -eq 1 ]; then
+    print_success "WebSocket server is ready"
+else
+    print_warning "WebSocket server not detected, continuing anyway"
+fi
 
 # Step 5: Start Modbus UI controller
 print_info "Starting Modbus UI controller..."

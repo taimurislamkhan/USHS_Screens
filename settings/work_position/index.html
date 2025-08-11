@@ -235,6 +235,19 @@
     <img class="logo" src="logo0.png" />
   </div>
   
+  <!-- Confirmation modal overlay (hidden by default) -->
+  <div id="confirm-overlay" style="display:none; position:absolute; inset:0; z-index:9999;">
+    <div style="position:absolute; inset:0; background: rgba(26,27,29,0.77); backdrop-filter: blur(8px);"></div>
+    <div id="confirm-modal" style="position:absolute; left:50%; top:50%; transform: translate(-50%, -50%); width:1090px; height:682px; background:#373a40; border:5px solid #434851; border-radius:24px; box-shadow:0 12px 24px 2px rgba(0,0,0,0.16);">
+      <div style="position:absolute; left:64px; top:64px; color:#fff; font-family:'SuisseIntl-Medium', sans-serif; font-size:52px; letter-spacing:-0.01em;">Are you sure to proceed?</div>
+      <div id="confirm-body-text" style="position:absolute; left:64px; top:163px; color:#7a8089; font-family:'SuisseIntl-Regular', sans-serif; font-size:32px; line-height:46px;"></div>
+      <div style="position:absolute; left:30px; right:30px; bottom:30px; display:flex; gap:30px; height:131px;">
+        <button id="btn-confirm" style="flex:1; border-radius:16px; background:#2c67cc; color:#fff; font-family:'SuisseIntlMono-Regular', monospace; font-size:30px; letter-spacing:0.03em; box-shadow: inset 2px 4px 12px 1px rgba(85,125,194,1), 0 0 6px rgba(44,103,204,0.67); cursor:pointer;">Confirm</button>
+        <button id="btn-dismiss" style="flex:1; border-radius:16px; background:#1e1f22; color:#fff; font-family:'SuisseIntlMono-Regular', monospace; font-size:30px; letter-spacing:0.03em; box-shadow: 0 0 12px rgba(49,51,56,0.42), inset 0 4px 24px rgba(55,58,65,1), inset 0 2px 4px rgba(70,74,83,1); cursor:pointer;">Dismiss</button>
+      </div>
+    </div>
+  </div>
+  
   <script>
     function navigateToPage(relativePath) {
       window.location.href = relativePath;

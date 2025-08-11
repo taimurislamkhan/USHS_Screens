@@ -69,52 +69,52 @@
     <div class="frame-42">
       <div class="frame-93">
         <div class="frame-40">
-          <div class="left-start">
+          <div class="left-start" id="state-left-start">
             <div class="frame-103">
-              <div class="ellipse-1"></div>
-              <div class="left-start2">Left Start</div>
+              <div class="ellipse-1" id="dot-left-start"></div>
+              <div class="left-start2 state-text" id="text-left-start">Left Start</div>
             </div>
           </div>
-          <div class="right-start">
+          <div class="right-start" id="state-right-start">
             <div class="frame-103">
-              <div class="ellipse-1"></div>
-              <div class="right-start2">Right Start</div>
+              <div class="ellipse-1" id="dot-right-start"></div>
+              <div class="right-start2 state-text" id="text-right-start">Right Start</div>
             </div>
           </div>
-          <div class="e-stop-active">
+          <div class="e-stop-active" id="state-estop-active">
             <div class="frame-103">
-              <div class="ellipse-1"></div>
-              <div class="e-stop-active2">E-Stop Active</div>
+              <div class="ellipse-1" id="dot-estop-active"></div>
+              <div class="e-stop-active2 state-text" id="text-estop-active">E-Stop Active</div>
             </div>
           </div>
-          <div class="home-switch">
+          <div class="home-switch" id="state-home-switch">
             <div class="frame-103">
-              <div class="ellipse-1"></div>
-              <div class="home-switch2">Home Switch</div>
+              <div class="ellipse-1" id="dot-home-switch"></div>
+              <div class="home-switch2 state-text" id="text-home-switch">Home Switch</div>
             </div>
           </div>
-          <div class="pressure">
+          <div class="pressure" id="state-pressure">
             <div class="frame-104">
-              <div class="pressure-value">0 PSI</div>
+              <div class="pressure-value" id="pressure-value">0 PSI</div>
             </div>
             <div class="frame-103">
-              <div class="ellipse-12"></div>
-              <div class="preassure">Preassure:</div>
+              <div class="ellipse-12" id="dot-pressure"></div>
+              <div class="preassure">Pressure:</div>
             </div>
           </div>
         </div>
       </div>
       <div class="frame-8">
         <div class="frame-149">
-          <div class="total-cycles">390</div>
+          <div class="total-cycles" id="total-cycles">0</div>
           <div class="frame-144">
             <div class="frame-142">
-              <div class="successful-cycles">370</div>
+              <div class="successful-cycles" id="successful-cycles">0</div>
               <div class="successful-cycles2">Successful Cycles</div>
             </div>
             <div class="line-11"></div>
             <div class="frame-143">
-              <div class="un-succesful-cycles">20</div>
+              <div class="un-succesful-cycles" id="unsuccessful-cycles">0</div>
               <div class="unsuccessful-cycles">Unsuccessful Cycles</div>
             </div>
           </div>
@@ -122,24 +122,24 @@
         <div class="frame-5">
           <div class="frame-201">
             <div class="frame-139">
-              <div class="cyles-accumulated-date-1">April 1, 2025</div>
-              <div class="cyles-accumulated-line-1">20 Cycles</div>
+              <div class="cyles-accumulated-date-1" id="hist-date-1">-</div>
+              <div class="cyles-accumulated-line-1" id="hist-count-1">0 Cycles</div>
             </div>
             <div class="frame-141">
-              <div class="cyles-accumulated-date-2">March 31, 2025</div>
-              <div class="cyles-accumulated-line-2">20 Cycles</div>
+              <div class="cyles-accumulated-date-2" id="hist-date-2">-</div>
+              <div class="cyles-accumulated-line-2" id="hist-count-2">0 Cycles</div>
             </div>
             <div class="frame-140">
-              <div class="cyles-accumulated-date-3">March 30, 2025</div>
-              <div class="cyles-accumulated-line-3">20 Cycles</div>
+              <div class="cyles-accumulated-date-3" id="hist-date-3">-</div>
+              <div class="cyles-accumulated-line-3" id="hist-count-3">0 Cycles</div>
             </div>
           </div>
           <div class="last-accumulated-cycles">Last Accumulated Cycles</div>
         </div>
         <div class="cycle-monitor">Cycle Monitor</div>
       </div>
-      <div class="reset-counts">
-        <div class="reset-counts2">Reset Counts</div>
+      <div class="reset-counts" id="reset-counts">
+        <div class="reset-counts2" >Reset Counts</div>
       </div>
     </div>
     <div class="frame-47">
@@ -168,8 +168,74 @@
       .home:hover, .button-control:hover, .manual-controls:hover {
         opacity: 0.8;
       }
+      /* Monitor active/inactive helpers */
+      .state-active { background: #494d55 !important; }
+      .state-inactive { background: #303338 !important; }
+      .state-active .state-text { color: #ffffff !important; }
+      .dot-active { background: #51da6a !important; border-color: #3fb254 !important; box-shadow: 0 0 24px rgba(81,218,106,0.88), inset 3px 6px 4px rgba(255,255,255,0.04) !important; }
+      .dot-inactive { background: #25272a !important; border-color: #2a2c30 !important; box-shadow: inset 3px 6px 4px rgba(255,255,255,0.04) !important; }
     `;
     document.head.appendChild(style);
+
+    // Render helpers
+    function setState(idBase, isActive) {
+      const row = document.getElementById(`state-${idBase}`);
+      const dot = document.getElementById(`dot-${idBase}`);
+      if (!row || !dot) return;
+      row.classList.toggle('state-active', !!isActive);
+      row.classList.toggle('state-inactive', !isActive);
+      dot.classList.toggle('dot-active', !!isActive);
+      dot.classList.toggle('dot-inactive', !isActive);
+    }
+
+    function renderMonitor(payload) {
+      if (!payload) return;
+      const { states, pressure_psi } = payload;
+      // Update PSI and pressure status
+      const psiEl = document.getElementById('pressure-value');
+      if (psiEl) psiEl.textContent = `${parseInt(pressure_psi||0)} PSI`;
+      // Pressure state background + dot
+      setState('pressure', states && states.pressure_ok);
+      // Update 4 states
+      setState('left-start', states && states.left_start);
+      setState('right-start', states && states.right_start);
+      setState('estop-active', states && states.estop_active);
+      setState('home-switch', states && states.home_switch);
+    }
+
+    // Attach monitor-update listener (from preload)
+    window.addEventListener('monitor-update', (e) => {
+      renderMonitor(e.detail && e.detail.payload);
+    });
+
+    // Read monitor stats from JSON via Electron main
+    async function loadMonitorStats() {
+      try {
+        const resp = await window.electronAPI?.sendMessage('read_monitor_stats');
+        const m = resp && (resp.monitor || resp);
+        if (!m) return;
+        const setText = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
+        setText('total-cycles', m.total||0);
+        setText('successful-cycles', m.successful||0);
+        setText('unsuccessful-cycles', m.unsuccessful||0);
+        const hist = (m.history||[]).slice(0,3);
+        for (let i=0;i<3;i++) {
+          const h = hist[i];
+          setText(`hist-date-${i+1}`, h ? h.date : '-');
+          setText(`hist-count-${i+1}`, `${h ? h.count : 0} Cycles`);
+        }
+      } catch (err) { /* ignore */ }
+    }
+
+    loadMonitorStats();
+
+    // Reset Counts button
+    document.getElementById('reset-counts').addEventListener('click', async () => {
+      try {
+        await window.electronAPI?.sendMessage('update_monitor_stats', { monitor: { total: 0, successful: 0, unsuccessful: 0, history: [] } });
+        loadMonitorStats();
+      } catch (e) {}
+    });
   </script>
 </body>
 </html>

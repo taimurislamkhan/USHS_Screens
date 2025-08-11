@@ -3,20 +3,21 @@
   box-sizing: border-box;
 }
 .settings-enter-password {
-  background: #494d55;
+  background: transparent; /* allow underlying page to show via backdrop blur */
   border-radius: 36px;
   height: 1080px;
   position: relative;
   overflow: hidden;
 }
 .frame-203 {
-  background: rgba(26, 27, 29, 0.77);
+  background: rgba(22, 24, 29, 0.55); /* darker with transparency so blur reads */
   width: 1920px;
   height: 1080px;
   position: absolute;
   left: 0px;
   top: 0px;
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(10px) saturate(120%);
+  -webkit-backdrop-filter: blur(10px) saturate(120%);
 }
 .frame-124 {
   background: #373a40;
@@ -407,7 +408,8 @@
     inset 0px 2px 4px 0px rgba(70, 74, 83, 1);
   overflow: hidden;
 }
-.frame {
+/* Scoped backspace icon frame to avoid global collisions with .frame used elsewhere */
+.keypad-backspace-frame {
   width: 60px;
   height: 60px;
   position: absolute;
@@ -416,7 +418,8 @@
   transform: translate(-50%, -50%);
   overflow: hidden;
 }
-.svg-repo-icon-carrier {
+/* Scope the SVG carrier to the overlay context only */
+.settings-enter-password .svg-repo-icon-carrier {
   height: auto;
   position: absolute;
   left: -0.01px;

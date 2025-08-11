@@ -155,8 +155,139 @@
       .home:hover, .button-control:hover, .monitor:hover {
         opacity: 0.8;
       }
+      /* Press feedback for black buttons */
+      .pressed-blue {
+        background: #2c67cc !important;
+        box-shadow: inset 4px 0px 24px 0px rgba(55,58,65,1), 0 0 12px rgba(102,124,162,0.42), inset 0 4px 4px rgba(102,124,162,1) !important;
+        border-color: #667ca2 !important;
+      }
     `;
     document.head.appendChild(style);
+
+    // Helper to send to Python via main
+    function sendMessage(msg) {
+      if (window.electronAPI && window.electronAPI.sendToPython) {
+        window.electronAPI.sendToPython(msg);
+      }
+    }
+
+    // Map elements
+    const heatButtons = [];
+    const coolingEl = document.querySelector('.manual-cooling');
+    for (let i = 1; i <= 8; i++) {
+      const el = document.querySelector(`.manual-tip-heat-${i}`);
+      if (el) heatButtons[i] = el;
+    }
+    const upEl = document.querySelector('.manual-platen-up');
+    const downEl = document.querySelector('.manual-platen-down');
+
+    // Momentary press handlers
+    function bindMomentary(el, onPress, onRelease) {
+      if (!el) return;
+      const press = (e) => { e.preventDefault(); el.classList.add('pressed-blue'); onPress(); };
+      const release = (e) => { e && e.preventDefault(); el.classList.remove('pressed-blue'); onRelease(); };
+      el.addEventListener('mousedown', press);
+      el.addEventListener('mouseup', release);
+      el.addEventListener('mouseleave', () => release());
+      el.addEventListener('touchstart', press, { passive: false });
+      el.addEventListener('touchend', release, { passive: false });
+      el.addEventListener('contextmenu', (e) => e.preventDefault());
+      return release;
+    }
+
+    // Up/Down report both press and release, and repeat periodically while pressed
+    function startRepeater(payloadBuilder) {
+      const id = setInterval(() => sendMessage(payloadBuilder()), 100);
+      return () => clearInterval(id);
+    }
+
+    let cancelUpRepeater = null;
+    let cancelDownRepeater = null;
+
+    bindMomentary(upEl,
+      () => { sendMessage({ type: 'button_press', button: 'up', state: true }); cancelUpRepeater = startRepeater(() => ({ type: 'button_press', button: 'up', state: true })); },
+      () => { if (cancelUpRepeater) cancelUpRepeater(); sendMessage({ type: 'button_press', button: 'up', state: false }); }
+    );
+    bindMomentary(downEl,
+      () => { sendMessage({ type: 'button_press', button: 'down', state: true }); cancelDownRepeater = startRepeater(() => ({ type: 'button_press', button: 'down', state: true })); },
+      () => { if (cancelDownRepeater) cancelDownRepeater(); sendMessage({ type: 'button_press', button: 'down', state: false }); }
+    );
+
+    // Heating 1..8 are momentary (hold while pressed)
+    const heatState = Array(9).fill(false);
+    const heatIntervals = Array(9).fill(null);
+    function pressHeat(i) {
+      if (heatState[i]) return;
+      heatState[i] = true;
+      if (heatButtons[i]) heatButtons[i].classList.add('pressed-blue');
+      sendMessage({ type: 'manual_heat_button', tip: i, state: true });
+      heatIntervals[i] = setInterval(() => sendMessage({ type: 'manual_heat_button', tip: i, state: true }), 100);
+    }
+    function releaseHeat(i) {
+      if (!heatState[i]) return;
+      heatState[i] = false;
+      if (heatButtons[i]) heatButtons[i].classList.remove('pressed-blue');
+      if (heatIntervals[i]) { clearInterval(heatIntervals[i]); heatIntervals[i] = null; }
+      sendMessage({ type: 'manual_heat_button', tip: i, state: false });
+    }
+    for (let i = 1; i <= 8; i++) {
+      const el = heatButtons[i];
+      if (!el) continue;
+      // Mouse
+      el.addEventListener('mousedown', (e) => { e.preventDefault(); pressHeat(i); });
+      el.addEventListener('mouseup', () => releaseHeat(i));
+      el.addEventListener('mouseleave', () => releaseHeat(i));
+      // Touch
+      el.addEventListener('touchstart', (e) => { e.preventDefault(); pressHeat(i); }, { passive: false });
+      el.addEventListener('touchend', () => releaseHeat(i));
+      // Context menu prevention
+      el.addEventListener('contextmenu', (e) => e.preventDefault());
+    }
+
+    // Cooling is also momentary
+    let coolingOn = false;
+    let coolingInterval = null;
+    if (coolingEl) {
+      const coolingPress = (e) => {
+        e.preventDefault();
+        if (coolingOn) return;
+        coolingOn = true;
+        coolingEl.classList.add('pressed-blue');
+        sendMessage({ type: 'manual_cooling', state: true });
+        coolingInterval = setInterval(() => sendMessage({ type: 'manual_cooling', state: true }), 100);
+      };
+      const coolingRelease = (e) => {
+        if (e) e.preventDefault();
+        if (!coolingOn) return;
+        coolingOn = false;
+        coolingEl.classList.remove('pressed-blue');
+        if (coolingInterval) { clearInterval(coolingInterval); coolingInterval = null; }
+        sendMessage({ type: 'manual_cooling', state: false });
+      };
+      // Mouse
+      coolingEl.addEventListener('mousedown', coolingPress);
+      coolingEl.addEventListener('mouseup', coolingRelease);
+      coolingEl.addEventListener('mouseleave', coolingRelease);
+      // Touch
+      coolingEl.addEventListener('touchstart', coolingPress, { passive: false });
+      coolingEl.addEventListener('touchend', coolingRelease, { passive: false });
+      coolingEl.addEventListener('contextmenu', (e) => e.preventDefault());
+    }
+
+    // No global periodic re-announce for toggles; only while pressed
+
+    // Receive periodic state snapshot from backend and render
+    window.addEventListener('manual-controls-update', (e) => {
+      const p = (e.detail && e.detail.payload) || {};
+      if (p.platen_mm !== undefined) {
+        const txt = document.querySelector('.manual-platen-distance');
+        if (txt) txt.textContent = `${(+p.platen_mm).toFixed(1)} mm`;
+      }
+      // Do NOT overwrite button states from backend; UI is source of truth
+      // Show blue for up/down while pressed
+      if (typeof p.up_pressed === 'boolean' && upEl) upEl.classList.toggle('pressed-blue', p.up_pressed);
+      if (typeof p.down_pressed === 'boolean' && downEl) downEl.classList.toggle('pressed-blue', p.down_pressed);
+    });
   </script>
 </body>
 </html>

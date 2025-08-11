@@ -32,7 +32,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
   sendToPython: (data) => ipcRenderer.send('send-to-python', data),
   
   // Get cached UI state
-  getCachedState: () => ipcRenderer.invoke('get-cached-state')
+  getCachedState: () => ipcRenderer.invoke('get-cached-state'),
+  
+  // Send generic messages (for heating screen)
+  sendMessage: (messageName, data) => ipcRenderer.invoke(messageName, data),
+  
+  // Listen for messages
+  onMessage: (callback) => {
+    const listener = (event, data) => callback(data);
+    ipcRenderer.on('modbus-update', listener);
+  }
 });
 
 // Handle navigation events from renderer
@@ -109,4 +118,29 @@ ipcRenderer.on('page-navigated-home', () => {
 // Handle batch updates for faster page loading
 ipcRenderer.on('batch-update', (event, data) => {
   window.dispatchEvent(new CustomEvent('batch-update', { detail: data }));
+});
+
+// Handle modbus data updates
+ipcRenderer.on('modbus-update', (event, data) => {
+  window.dispatchEvent(new CustomEvent('modbus-update', { detail: data }));
+});
+
+// Handle tip state changed notifications
+ipcRenderer.on('tip-state-changed', (event, data) => {
+  window.dispatchEvent(new CustomEvent('tip-state-changed', { detail: data }));
+});
+
+// Handle heating update events
+ipcRenderer.on('heating-update', (event, data) => {
+  window.dispatchEvent(new CustomEvent('heating-update', { detail: data }));
 }); 
+
+// Handle monitor screen updates
+ipcRenderer.on('monitor-update', (event, data) => {
+  window.dispatchEvent(new CustomEvent('monitor-update', { detail: data }));
+});
+
+// Handle manual controls updates
+ipcRenderer.on('manual-controls-update', (event, data) => {
+  window.dispatchEvent(new CustomEvent('manual-controls-update', { detail: data }));
+});

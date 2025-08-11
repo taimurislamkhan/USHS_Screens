@@ -1,74 +1,69 @@
 {
   "1": {
-    "id": 1,
-    "state": 1,
-    "joules": 3.4564655941382,
-    "distance": 0.5047690656358027,
-    "progress": 86,
-    "text": "Active",
-    "active": true
+    "active": true,
+    "energy_setpoint": 3.3000000000000016,
+    "distance_setpoint": 1.5000000000000002,
+    "heat_start_delay": 3.0000000000000013
   },
   "2": {
-    "id": 2,
-    "state": 0,
-    "joules": 0.0,
-    "distance": 0.0,
-    "progress": 0,
-    "text": "Inactive",
-    "active": false
+    "active": true,
+    "energy_setpoint": 0.6,
+    "distance_setpoint": 0.7999999999999999,
+    "heat_start_delay": 0.7999999999999999
   },
   "3": {
-    "id": 3,
-    "state": 1,
-    "joules": -0.901463409396365,
-    "distance": 0.8273634790600419,
-    "progress": 75,
-    "text": "Active",
-    "active": true
+    "active": true,
+    "energy_setpoint": 1.0999999999999999,
+    "distance_setpoint": 0.9999999999999999,
+    "heat_start_delay": 0
   },
   "4": {
-    "id": 4,
-    "state": 1,
-    "joules": -2.6891414366386095,
-    "distance": -0.49802415898233804,
-    "progress": 75,
-    "text": "Active",
-    "active": true
+    "active": true,
+    "energy_setpoint": 0,
+    "distance_setpoint": 0,
+    "heat_start_delay": 0
   },
   "5": {
-    "id": 5,
-    "state": 0,
-    "joules": 0.0,
-    "distance": 0.0,
-    "progress": 0,
-    "text": "Inactive",
-    "active": false
+    "active": true,
+    "energy_setpoint": 0.7999999999999999,
+    "distance_setpoint": 0,
+    "heat_start_delay": 0
   },
   "6": {
-    "id": 6,
-    "state": 0,
-    "joules": 0.0,
-    "distance": 0.0,
-    "progress": 0,
-    "text": "Inactive",
-    "active": false
+    "active": true,
+    "energy_setpoint": 0.6,
+    "distance_setpoint": 0,
+    "heat_start_delay": 0
   },
   "7": {
-    "id": 7,
-    "state": 0,
-    "joules": 0.0,
-    "distance": 0.0,
-    "progress": 0,
-    "text": "Inactive",
-    "active": false
+    "active": true,
+    "energy_setpoint": 0,
+    "distance_setpoint": 0,
+    "heat_start_delay": 0
   },
   "8": {
-    "id": 8,
-    "state": 0,
-    "joules": 0.0,
-    "distance": 0.0,
-    "progress": 0,
-    "text": "Inactive",
-    "active": false
+    "active": true,
+    "energy_setpoint": 0.5,
+    "distance_setpoint": 0.7,
+    "heat_start_delay": 0.5
+  },
+  "configuration": {
+    "weld_time": 3.179999999999976,
+    "pulse_energy": 29.100000000000165,
+    "cool_time": 0.11999999999999998,
+    "presence_height": 0.11000000000000008,
+    "boss_tolerance_minus": 0.009000000000000001,
+    "boss_tolerance_plus": 0.015000000000000006
+  },
+  "monitor": {
+    "total": 0,
+    "successful": 0,
+    "unsuccessful": 0,
+    "history": []
+  },
+  "work_position": {
+    "position_mm": 0.5,
+    "setpoint_mm": 1.8,
+    "updated_at": "2025-08-11T16:50:34.800Z"
   }
 }

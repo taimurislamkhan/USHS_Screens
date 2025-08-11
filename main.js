@@ -233,6 +233,221 @@ ipcMain.handle('get-cached-state', () => {
   return cachedUIState;
 });
 
+// Handle reading tip states
+ipcMain.handle('read_tip_states', async () => {
+  try {
+    const tipStatesPath = path.join(__dirname, 'tip_states.json');
+    const data = fs.readFileSync(tipStatesPath, 'utf8');
+    const tipStates = JSON.parse(data);
+    return { tipStates };
+  } catch (error) {
+    console.error('Error reading tip states:', error);
+    return { error: error.message };
+  }
+});
+
+// Handle updating tip state
+ipcMain.handle('update_tip_state', async (event, { tipNumber, active }) => {
+  try {
+    // Read current states
+    const tipStatesPath = path.join(__dirname, 'tip_states.json');
+    let tipStates = {};
+    try {
+      const data = fs.readFileSync(tipStatesPath, 'utf8');
+      tipStates = JSON.parse(data);
+    } catch (err) {
+      // Initialize if file doesn't exist
+      for (let i = 1; i <= 8; i++) {
+        tipStates[i] = {
+          active: i <= 4,
+          energy_setpoint: 0.0,
+          distance_setpoint: 0.0,
+          heat_start_delay: 0.0
+        };
+      }
+    }
+    
+    // Update the specific tip state
+    if (tipStates[tipNumber]) {
+      tipStates[tipNumber].active = active;
+    }
+    
+    // Write back to file
+    fs.writeFileSync(tipStatesPath, JSON.stringify(tipStates, null, 2));
+    
+    // Send to Python script via WebSocket to write to Modbus
+    if (wss && wss.clients.size > 0) {
+      const client = Array.from(wss.clients)[0];
+      client.send(JSON.stringify({
+        type: 'update_tip_active',
+        tipNumber: tipNumber,
+        active: active
+      }));
+    }
+    
+    // Notify all renderer processes about the change
+    if (mainWindow) {
+      mainWindow.webContents.send('tip-state-changed', { tipNumber, active });
+    }
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating tip state:', error);
+    return { error: error.message };
+  }
+});
+
+// Handle updating heating setpoints in JSON
+ipcMain.handle('update_heating_setpoint', async (event, { tipNumber, type, value }) => {
+  try {
+    // Read current states
+    const tipStatesPath = path.join(__dirname, 'tip_states.json');
+    let tipStates = {};
+    try {
+      const data = fs.readFileSync(tipStatesPath, 'utf8');
+      tipStates = JSON.parse(data);
+    } catch (err) {
+      // Initialize if file doesn't exist
+      for (let i = 1; i <= 8; i++) {
+        tipStates[i] = {
+          active: i <= 4,
+          energy_setpoint: 0.0,
+          distance_setpoint: 0.0,
+          heat_start_delay: 0.0
+        };
+      }
+    }
+    
+    // Update the specific setpoint
+    if (tipStates[tipNumber]) {
+      if (type === 'energy') {
+        tipStates[tipNumber].energy_setpoint = value;
+      } else if (type === 'distance') {
+        tipStates[tipNumber].distance_setpoint = value;
+      } else if (type === 'heat_start_delay') {
+        tipStates[tipNumber].heat_start_delay = value;
+      }
+    }
+    
+    // Write back to file
+    fs.writeFileSync(tipStatesPath, JSON.stringify(tipStates, null, 2));
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating heating setpoint:', error);
+    return { error: error.message };
+  }
+});
+
+// Handle reading configuration counters from JSON
+ipcMain.handle('read_configuration', async () => {
+  try {
+    const tipStatesPath = path.join(__dirname, 'tip_states.json');
+    const data = fs.readFileSync(tipStatesPath, 'utf8');
+    const tipStates = JSON.parse(data);
+    const config = tipStates.configuration || {
+      weld_time: 0,
+      pulse_energy: 10,
+      cool_time: 0,
+      presence_height: 0,
+      boss_tolerance_minus: 0,
+      boss_tolerance_plus: 0
+    };
+    return { configuration: config };
+  } catch (error) {
+    console.error('Error reading configuration:', error);
+    return { error: error.message };
+  }
+});
+
+// Handle updating configuration counters in JSON
+ipcMain.handle('update_configuration', async (event, { key, value }) => {
+  try {
+    const tipStatesPath = path.join(__dirname, 'tip_states.json');
+    let tipStates = {};
+    try {
+      const data = fs.readFileSync(tipStatesPath, 'utf8');
+      tipStates = JSON.parse(data);
+    } catch (err) {
+      // initialize base structure if file missing
+      for (let i = 1; i <= 8; i++) {
+        tipStates[i] = {
+          active: i <= 4,
+          energy_setpoint: 0.0,
+          distance_setpoint: 0.0,
+          heat_start_delay: 0.0
+        };
+      }
+      tipStates.configuration = {
+        weld_time: 0,
+        pulse_energy: 10,
+        cool_time: 0,
+        presence_height: 0,
+        boss_tolerance_minus: 0,
+        boss_tolerance_plus: 0
+      };
+    }
+
+    if (!tipStates.configuration) {
+      tipStates.configuration = {
+        weld_time: 0,
+        pulse_energy: 10,
+        cool_time: 0,
+        presence_height: 0,
+        boss_tolerance_minus: 0,
+        boss_tolerance_plus: 0
+      };
+    }
+
+    if (key in tipStates.configuration) {
+      tipStates.configuration[key] = value;
+    }
+
+    fs.writeFileSync(tipStatesPath, JSON.stringify(tipStates, null, 2));
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating configuration:', error);
+    return { error: error.message };
+  }
+});
+
+// Save work position details into JSON
+ipcMain.handle('save_work_position_json', async (event, { positionMm, setpointMm }) => {
+  try {
+    const tipStatesPath = path.join(__dirname, 'tip_states.json');
+    let dataObj = {};
+    try {
+      dataObj = JSON.parse(fs.readFileSync(tipStatesPath, 'utf8'));
+    } catch (_) {
+      // initialize base structure if file missing
+      for (let i = 1; i <= 8; i++) {
+        dataObj[i] = {
+          active: i <= 4,
+          energy_setpoint: 0.0,
+          distance_setpoint: 0.0,
+          heat_start_delay: 0.0
+        };
+      }
+    }
+
+    const numericPosition = Number(positionMm) || 0;
+    const numericSetpoint = Number(setpointMm) || 0;
+
+    dataObj.work_position = {
+      position_mm: numericPosition,
+      setpoint_mm: numericSetpoint,
+      updated_at: new Date().toISOString()
+    };
+
+    fs.writeFileSync(tipStatesPath, JSON.stringify(dataObj, null, 2));
+    return { success: true };
+  } catch (error) {
+    console.error('Error saving work position to JSON:', error);
+    return { error: error.message };
+  }
+});
+
 // WebSocket server functions
 function startWebSocketServer() {
   wss = new WebSocket.Server({ port: 8080 });
@@ -330,6 +545,26 @@ function startWebSocketServer() {
               pressed: data.pressed
             });
           });
+        } else if (data.type === 'modbus_update' && mainWindow) {
+          // Send Modbus data update to all renderer windows
+          BrowserWindow.getAllWindows().forEach(window => {
+            window.webContents.send('modbus-update', data);
+          });
+        } else if (data.type === 'heating_update' && mainWindow) {
+          // Send heating setpoint update to all renderer windows
+          BrowserWindow.getAllWindows().forEach(window => {
+            window.webContents.send('heating-update', data);
+          });
+        } else if (data.type === 'monitor_update' && mainWindow) {
+          // Forward monitor screen updates to all windows
+          BrowserWindow.getAllWindows().forEach(window => {
+            window.webContents.send('monitor-update', data);
+          });
+        } else if (data.type === 'manual_controls_update' && mainWindow) {
+          // Forward manual controls updates to all windows
+          BrowserWindow.getAllWindows().forEach(window => {
+            window.webContents.send('manual-controls-update', data);
+          });
         } else if (data.type === 'update_slider_position' && mainWindow) {
           // Send slider position update to renderer
           BrowserWindow.getAllWindows().forEach(window => {
@@ -356,5 +591,38 @@ function startWebSocketServer() {
 app.on('before-quit', () => {
   if (wss) {
     wss.close();
+  }
+});
+
+// Simple JSON storage for monitor stats (cycles)
+ipcMain.handle('read_monitor_stats', async () => {
+  try {
+    const tipStatesPath = path.join(__dirname, 'tip_states.json');
+    const data = fs.readFileSync(tipStatesPath, 'utf8');
+    const j = JSON.parse(data);
+    const monitor = j.monitor || { total: 0, successful: 0, unsuccessful: 0, history: [] };
+    return { monitor };
+  } catch (e) {
+    return { monitor: { total: 0, successful: 0, unsuccessful: 0, history: [] } };
+  }
+});
+
+ipcMain.handle('update_monitor_stats', async (event, payload) => {
+  try {
+    const tipStatesPath = path.join(__dirname, 'tip_states.json');
+    let j = {};
+    try {
+      j = JSON.parse(fs.readFileSync(tipStatesPath, 'utf8'));
+    } catch (_) {
+      // initialize base structure
+      for (let i = 1; i <= 8; i++) {
+        j[i] = { active: i <= 4, energy_setpoint: 0.0, distance_setpoint: 0.0, heat_start_delay: 0.0 };
+      }
+    }
+    j.monitor = payload && payload.monitor ? payload.monitor : (j.monitor || { total: 0, successful: 0, unsuccessful: 0, history: [] });
+    fs.writeFileSync(tipStatesPath, JSON.stringify(j, null, 2));
+    return { success: true };
+  } catch (e) {
+    return { error: e.message };
   }
 });

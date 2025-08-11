@@ -36,6 +36,7 @@
    }
    </style>
   <title>Document</title>
+  <script src="../../preload.js"></script>
 </head>
 <body>
   <div class="settings-heating">
@@ -72,7 +73,7 @@
           <div class="frame-94">
             <div class="frame-95">
               <div class="energy">Energy</div>
-              <div class="frame-195">
+              <div class="frame-195" onclick="openTipSettings(1, 'energy')">
                 <div class="frame-5">
                   <div class="tip-1-joules">0 J</div>
                 </div>
@@ -80,7 +81,7 @@
             </div>
             <div class="frame-98">
               <div class="distance">Distance</div>
-              <div class="frame-1952">
+              <div class="frame-1952" onclick="openTipSettings(1, 'distance')">
                 <div class="frame-5">
                   <div class="tip-1-distance">0 mm</div>
                 </div>
@@ -90,16 +91,16 @@
           <div class="frame-982">
             <div class="_1">1</div>
           </div>
-          <div class="tip-1-active">
-            <div class="ellipse-1"></div>
-            <div class="active">Active</div>
+          <div class="tip-1-active" onclick="toggleTipState(1)">
+            <div class="ellipse-1" id="tip-1-ellipse"></div>
+            <div class="active" id="tip-1-text">Active</div>
           </div>
         </div>
         <div class="frame-13">
           <div class="frame-942">
             <div class="frame-95">
               <div class="energy">Energy</div>
-              <div class="frame-195">
+              <div class="frame-195" onclick="openTipSettings(2, 'energy')">
                 <div class="frame-5">
                   <div class="tip-2-energy">0 J</div>
                 </div>
@@ -107,7 +108,7 @@
             </div>
             <div class="frame-98">
               <div class="distance">Distance</div>
-              <div class="frame-1952">
+              <div class="frame-1952" onclick="openTipSettings(2, 'distance')">
                 <div class="frame-5">
                   <div class="tip-2-distance">0 mm</div>
                 </div>
@@ -117,16 +118,16 @@
           <div class="frame-982">
             <div class="_2">2</div>
           </div>
-          <div class="tip-2-active">
-            <div class="ellipse-1"></div>
-            <div class="active">Active</div>
+          <div class="tip-2-active" onclick="toggleTipState(2)">
+            <div class="ellipse-1" id="tip-2-ellipse"></div>
+            <div class="active" id="tip-2-text">Active</div>
           </div>
         </div>
         <div class="frame-14">
           <div class="frame-94">
             <div class="frame-95">
               <div class="energy">Energy</div>
-              <div class="frame-1952">
+              <div class="frame-1952" onclick="openTipSettings(3, 'energy')">
                 <div class="frame-5">
                   <div class="tip-3-energy">0 J</div>
                 </div>
@@ -134,7 +135,7 @@
             </div>
             <div class="frame-98">
               <div class="distance">Distance</div>
-              <div class="frame-1952">
+              <div class="frame-1952" onclick="openTipSettings(3, 'distance')">
                 <div class="frame-5">
                   <div class="tip-3-distance">0 mm</div>
                 </div>
@@ -144,16 +145,16 @@
           <div class="frame-982">
             <div class="_3">3</div>
           </div>
-          <div class="tip-3-active">
-            <div class="ellipse-1"></div>
-            <div class="active">Active</div>
+          <div class="tip-3-active" onclick="toggleTipState(3)">
+            <div class="ellipse-1" id="tip-3-ellipse"></div>
+            <div class="active" id="tip-3-text">Active</div>
           </div>
         </div>
         <div class="frame-15">
           <div class="frame-942">
             <div class="frame-95">
               <div class="energy">Energy</div>
-              <div class="frame-195">
+              <div class="frame-195" onclick="openTipSettings(4, 'energy')">
                 <div class="frame-5">
                   <div class="tip-4-energy">0 J</div>
                 </div>
@@ -161,7 +162,7 @@
             </div>
             <div class="frame-98">
               <div class="distance">Distance</div>
-              <div class="frame-1952">
+              <div class="frame-1952" onclick="openTipSettings(4, 'distance')">
                 <div class="frame-5">
                   <div class="tip-4-distance">0 mm</div>
                 </div>
@@ -171,9 +172,9 @@
           <div class="frame-982">
             <div class="_4">4</div>
           </div>
-          <div class="tip-4-active">
-            <div class="ellipse-1"></div>
-            <div class="active">Active</div>
+          <div class="tip-4-active" onclick="toggleTipState(4)">
+            <div class="ellipse-1" id="tip-4-ellipse"></div>
+            <div class="active" id="tip-4-text">Active</div>
           </div>
         </div>
       </div>
@@ -182,7 +183,7 @@
           <div class="frame-94">
             <div class="frame-95">
               <div class="energy2">Energy</div>
-              <div class="frame-195">
+              <div class="frame-195" onclick="openTipSettings(5, 'energy')">
                 <div class="frame-52">
                   <div class="tip-5-energy">0 J</div>
                 </div>
@@ -190,7 +191,7 @@
             </div>
             <div class="frame-98">
               <div class="distance2">Distance</div>
-              <div class="frame-1952">
+              <div class="frame-1952" onclick="openTipSettings(5, 'distance')">
                 <div class="frame-52">
                   <div class="tip-5-distance">0 mm</div>
                 </div>
@@ -200,16 +201,16 @@
           <div class="frame-982">
             <div class="_5">5</div>
           </div>
-          <div class="tip-5-active">
-            <div class="ellipse-2"></div>
-            <div class="inactive">Inactive</div>
+          <div class="tip-5-active" onclick="toggleTipState(5)">
+            <div class="ellipse-2" id="tip-5-ellipse"></div>
+            <div class="inactive" id="tip-5-text">Inactive</div>
           </div>
         </div>
         <div class="frame-16">
           <div class="frame-942">
             <div class="frame-95">
               <div class="energy2">Energy</div>
-              <div class="frame-195">
+              <div class="frame-195" onclick="openTipSettings(6, 'energy')">
                 <div class="frame-52">
                   <div class="tip-6-energy">0 J</div>
                 </div>
@@ -217,7 +218,7 @@
             </div>
             <div class="frame-98">
               <div class="distance2">Distance</div>
-              <div class="frame-1952">
+              <div class="frame-1952" onclick="openTipSettings(6, 'distance')">
                 <div class="frame-52">
                   <div class="tip-6-distance">0 mm</div>
                 </div>
@@ -227,16 +228,16 @@
           <div class="frame-982">
             <div class="_6">6</div>
           </div>
-          <div class="tip-6-active">
-            <div class="ellipse-2"></div>
-            <div class="inactive">Inactive</div>
+          <div class="tip-6-active" onclick="toggleTipState(6)">
+            <div class="ellipse-2" id="tip-6-ellipse"></div>
+            <div class="inactive" id="tip-6-text">Inactive</div>
           </div>
         </div>
         <div class="frame-17">
           <div class="frame-94">
             <div class="frame-95">
               <div class="energy2">Energy</div>
-              <div class="frame-195">
+              <div class="frame-195" onclick="openTipSettings(7, 'energy')">
                 <div class="frame-52">
                   <div class="tip-7-energy">0 J</div>
                 </div>
@@ -244,7 +245,7 @@
             </div>
             <div class="frame-98">
               <div class="distance2">Distance</div>
-              <div class="frame-1952">
+              <div class="frame-1952" onclick="openTipSettings(7, 'distance')">
                 <div class="frame-52">
                   <div class="tip-7-distance">0 mm</div>
                 </div>
@@ -254,16 +255,16 @@
           <div class="frame-982">
             <div class="_7">7</div>
           </div>
-          <div class="tip-7-active">
-            <div class="ellipse-2"></div>
-            <div class="inactive">Inactive</div>
+          <div class="tip-7-active" onclick="toggleTipState(7)">
+            <div class="ellipse-2" id="tip-7-ellipse"></div>
+            <div class="inactive" id="tip-7-text">Inactive</div>
           </div>
         </div>
         <div class="frame-18">
           <div class="frame-942">
             <div class="frame-95">
               <div class="energy2">Energy</div>
-              <div class="frame-195">
+              <div class="frame-195" onclick="openTipSettings(8, 'energy')">
                 <div class="frame-52">
                   <div class="tip-8-energy">0 J</div>
                 </div>
@@ -271,7 +272,7 @@
             </div>
             <div class="frame-98">
               <div class="distance2">Distance</div>
-              <div class="frame-1952">
+              <div class="frame-1952" onclick="openTipSettings(8, 'distance')">
                 <div class="frame-52">
                   <div class="tip-8-distance">0 mm</div>
                 </div>
@@ -281,9 +282,9 @@
           <div class="frame-982">
             <div class="_8">8</div>
           </div>
-          <div class="tip-8-active">
-            <div class="ellipse-2"></div>
-            <div class="inactive">Inactive</div>
+          <div class="tip-8-active" onclick="toggleTipState(8)">
+            <div class="ellipse-2" id="tip-8-ellipse"></div>
+            <div class="inactive" id="tip-8-text">Inactive</div>
           </div>
         </div>
       </div>
@@ -303,11 +304,213 @@
   </div>
   
   <script>
+    // Tip states stored locally
+    let tipStates = {};
+
+    // Initialize tip states from JSON file
+    async function initializeTipStates() {
+      try {
+        // Load states from JSON file
+        const response = await window.electronAPI.sendMessage('read_tip_states');
+        if (response && response.tipStates) {
+          tipStates = response.tipStates;
+          updateUI();
+          console.log('Loaded tip states:', tipStates);
+        }
+      } catch (error) {
+        console.error('Error loading tip states:', error);
+        // Initialize with defaults if error
+        tipStates = {
+          1: { active: true },
+          2: { active: true },
+          3: { active: true },
+          4: { active: true },
+          5: { active: false },
+          6: { active: false },
+          7: { active: false },
+          8: { active: false }
+        };
+        updateUI();
+      }
+    }
+
+    // Toggle tip state
+    async function toggleTipState(tipNumber) {
+      // Toggle the state
+      tipStates[tipNumber].active = !tipStates[tipNumber].active;
+      
+      // Update UI immediately
+      updateTipUI(tipNumber);
+      
+      // Save to JSON file and write to Modbus
+      try {
+        await window.electronAPI.sendMessage('update_tip_state', {
+          tipNumber: tipNumber,
+          active: tipStates[tipNumber].active
+        });
+      } catch (error) {
+        console.error('Error updating tip state:', error);
+      }
+    }
+
+    // Update UI for a specific tip
+    function updateTipUI(tipNumber) {
+      const ellipse = document.getElementById(`tip-${tipNumber}-ellipse`);
+      const text = document.getElementById(`tip-${tipNumber}-text`);
+      const isActive = tipStates[tipNumber].active;
+      
+      if (isActive) {
+        ellipse.className = 'ellipse-1'; // Green dot
+        text.className = 'active';
+        text.textContent = 'Active';
+      } else {
+        ellipse.className = 'ellipse-2'; // Red dot
+        text.className = 'inactive';
+        text.textContent = 'Inactive';
+      }
+      
+      // Update styling for ALL tips to ensure consistency
+      const tipFrameClass = tipNumber === 1 ? 'frame-6' : 
+                           tipNumber === 2 ? 'frame-13' : 
+                           tipNumber === 3 ? 'frame-14' : 
+                           tipNumber === 4 ? 'frame-15' :
+                           tipNumber === 5 ? 'frame-62' : 
+                           tipNumber === 6 ? 'frame-16' : 
+                           tipNumber === 7 ? 'frame-17' : 'frame-18';
+      
+      const tipContainer = document.querySelector(`.${tipFrameClass}`);
+      if (tipContainer) {
+        // Update container background
+        if (isActive) {
+          tipContainer.style.background = '#373a40';
+        } else {
+          tipContainer.style.background = '#2a2c30';
+        }
+        
+        // Update energy and distance labels and text
+        const energyLabel = tipContainer.querySelector('.energy2, .energy');
+        const distanceLabel = tipContainer.querySelector('.distance2, .distance');
+        const frameContainers = tipContainer.querySelectorAll('.frame-52, .frame-5');
+        const energyText = tipContainer.querySelector(`.tip-${tipNumber}-energy`);
+        const distanceText = tipContainer.querySelector(`.tip-${tipNumber}-distance`);
+        const tipNumberText = tipContainer.querySelector(`._${tipNumber}`);
+        
+        if (isActive) {
+          // Change to active styling
+          if (energyLabel) {
+            energyLabel.className = 'energy';
+          }
+          if (distanceLabel) {
+            distanceLabel.className = 'distance';
+          }
+          frameContainers.forEach(frame => {
+            frame.className = 'frame-5';
+          });
+          // Update text colors to white
+          if (energyText) {
+            energyText.style.color = '#ffffff';
+          }
+          if (distanceText) {
+            distanceText.style.color = '#ffffff';
+          }
+          // Update tip number color to white
+          if (tipNumberText) {
+            tipNumberText.style.color = '#ffffff';
+          }
+        } else {
+          // Change to inactive styling
+          if (energyLabel) {
+            energyLabel.className = 'energy2';
+          }
+          if (distanceLabel) {
+            distanceLabel.className = 'distance2';
+          }
+          frameContainers.forEach(frame => {
+            frame.className = 'frame-52';
+          });
+          // Update text colors to gray
+          if (energyText) {
+            energyText.style.color = '#555c65';
+          }
+          if (distanceText) {
+            distanceText.style.color = '#555c65';
+          }
+          // Update tip number color to gray
+          if (tipNumberText) {
+            tipNumberText.style.color = '#555c65';
+          }
+        }
+      }
+    }
+
+    // Update all tip UIs
+    function updateUI() {
+      for (let i = 1; i <= 8; i++) {
+        updateTipUI(i);
+      }
+    }
+
+    // Note: Removed updateModbusValues() function
+    // The heating screen now only WRITES TO Modbus, it doesn't read FROM Modbus for display
+    // Display values come from JSON only, Modbus is only used for sending commands to hardware
+    
+    // Load setpoints from JSON on initialization
+    async function loadSetpoints() {
+      try {
+        console.log('Loading setpoints from JSON...');
+        const response = await window.electronAPI.sendMessage('read_tip_states');
+        if (response && response.tipStates) {
+          console.log('Tip states received:', response.tipStates);
+          for (let i = 1; i <= 8; i++) {
+            const tipData = response.tipStates[i];
+            if (tipData) {
+              // Update energy display
+              const energyElement = document.querySelector(`.tip-${i}-joules`) || 
+                                  document.querySelector(`.tip-${i}-energy`);
+              if (energyElement && tipData.energy_setpoint !== undefined) {
+                const newValue = `${tipData.energy_setpoint.toFixed(1)} J`;
+                console.log(`Updating tip ${i} energy: ${energyElement.textContent} -> ${newValue}`);
+                energyElement.textContent = newValue;
+              }
+              
+              // Update distance display
+              const distanceElement = document.querySelector(`.tip-${i}-distance`);
+              if (distanceElement && tipData.distance_setpoint !== undefined) {
+                const newValue = `${tipData.distance_setpoint.toFixed(1)} mm`;
+                console.log(`Updating tip ${i} distance: ${distanceElement.textContent} -> ${newValue}`);
+                distanceElement.textContent = newValue;
+              }
+            }
+          }
+        } else {
+          console.log('No tip states received or invalid response');
+        }
+      } catch (error) {
+        console.error('Error loading setpoints:', error);
+      }
+    }
+
     function navigateToPage(relativePath) {
       window.location.href = relativePath;
     }
+
+    // Function to open tip settings for a specific tip
+    function openTipSettings(tipNumber, source) {
+      // Store the selected tip in localStorage for the tip settings page
+      localStorage.setItem('selectedTip', tipNumber);
+      localStorage.setItem('tipSettingsSource', source);
+      
+      // Navigate to tip settings page
+      window.location.href = 'tip_Settings/index.html';
+    }
     
-    // Add click styling to navigation buttons
+    // Function to force refresh setpoints (can be called manually for debugging)
+    window.refreshSetpoints = function() {
+      console.log('Manually refreshing setpoints...');
+      loadSetpoints();
+    };
+    
+    // Add click styling to navigation buttons and tip buttons
     const style = document.createElement('style');
     style.textContent = `
       .tab-inactive, .frame-180, .button-settings {
@@ -317,8 +520,107 @@
       .tab-inactive:hover, .frame-180:hover, .button-settings:hover {
         opacity: 0.8;
       }
+      [class^="tip-"][class$="-active"] {
+        cursor: pointer;
+        transition: opacity 0.2s ease;
+      }
+      [class^="tip-"][class$="-active"]:hover {
+        opacity: 0.8;
+      }
+      
+      /* Clickable energy and distance boxes */
+      .frame-195, .frame-1952 {
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+      .frame-195:hover, .frame-1952:hover {
+        transform: scale(1.02);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      }
+      .frame-195:active, .frame-1952:active {
+        transform: scale(0.98);
+      }
     `;
     document.head.appendChild(style);
+
+    // Check if returning from tip settings and reload setpoints
+    function checkForSetpointUpdates() {
+      const lastTipSettingsVisit = localStorage.getItem('lastTipSettingsVisit');
+      const lastHeatingLoad = localStorage.getItem('lastHeatingLoad') || '0';
+      
+      if (lastTipSettingsVisit && parseInt(lastTipSettingsVisit) > parseInt(lastHeatingLoad)) {
+        console.log('Detected return from tip settings, reloading setpoints...');
+        loadSetpoints();
+        localStorage.setItem('lastHeatingLoad', Date.now().toString());
+      }
+    }
+    
+    // Add window focus event to reload setpoints when returning
+    window.addEventListener('focus', () => {
+      console.log('Window focused, reloading setpoints...');
+      loadSetpoints();
+    });
+    
+    // Add page show event to reload setpoints when returning from other pages
+    window.addEventListener('pageshow', () => {
+      console.log('Page shown, reloading setpoints...');
+      loadSetpoints();
+    });
+    
+    // Add visibility change event to reload setpoints when page becomes visible
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        console.log('Page became visible, reloading setpoints...');
+        setTimeout(() => loadSetpoints(), 100); // Small delay to ensure everything is ready
+      }
+    });
+
+    // Initialize when page loads
+    document.addEventListener('DOMContentLoaded', () => {
+      initializeTipStates();
+      // Removed updateModbusValues() - we only write TO Modbus, not read from it for display
+      loadSetpoints();  // Load saved setpoints from JSON
+      checkForSetpointUpdates();  // Check if returning from tip settings
+      
+      // Set timestamp for this heating screen load
+      localStorage.setItem('lastHeatingLoad', Date.now().toString());
+      
+      // Removed request for heating values from Python - we only read from JSON for display
+      // Python should only receive write commands, not send display updates
+      
+      // Write initial setpoints from JSON to Modbus
+      setTimeout(async () => {
+        try {
+          const response = await window.electronAPI.sendMessage('read_tip_states');
+          if (response && response.tipStates) {
+            for (let i = 1; i <= 8; i++) {
+              const tipData = response.tipStates[i];
+              if (tipData) {
+                // Write energy setpoint to Modbus
+                if (tipData.energy_setpoint !== undefined) {
+                  window.electronAPI.sendToPython({
+                    type: 'update_heating_energy',
+                    tipNumber: i,
+                    value: tipData.energy_setpoint
+                  });
+                }
+                
+                // Write distance setpoint to Modbus
+                if (tipData.distance_setpoint !== undefined) {
+                  window.electronAPI.sendToPython({
+                    type: 'update_heating_distance',
+                    tipNumber: i,
+                    value: tipData.distance_setpoint
+                  });
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error writing initial setpoints to Modbus:', error);
+        }
+      }, 1000); // Delay to ensure Python connection is ready
+    });
   </script>
 </body>
 </html>

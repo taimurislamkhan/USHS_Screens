@@ -17,9 +17,10 @@ from pymodbus.transaction import ModbusRtuFramer
 
 from modbus_map import *
 import websockets.exceptions
+import os
 
 class ModbusSimpleUSHSController:
-    def __init__(self, serial_port='/tmp/vserial2', baudrate=9600, slave_id=1):
+    def __init__(self, serial_port='/tmp/vserial1', baudrate=1000000, slave_id=1):
         """Initialize the Modbus UI controller"""
         self.websocket = None
         self.connected = False
@@ -49,9 +50,78 @@ class ModbusSimpleUSHSController:
             'down': False,
             'speed_mode': 0
         }
+
+        # Manual controls cache
+        self.manual_heating_buttons = {i: False for i in range(1, 9)}
+        self.manual_cooling_on = False
+        self.manual_platen_mm = 0.0
         
         # Initialize all properties with default values
         self._initialize_properties()
+        
+        # Load tip states from JSON file
+        self._load_tip_states_from_json()
+        
+        # Heartbeat counter for periodic sync
+        self.heartbeat_counter = 0
+        self.heartbeat_interval = 100  # Every 100 cycles (2 seconds at 50Hz)
+        
+    def _load_tip_states_from_json(self):
+        """Load tip active states from tip_states.json"""
+        try:
+            json_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'tip_states.json')
+            if os.path.exists(json_path):
+                with open(json_path, 'r') as f:
+                    tip_states = json.load(f)
+                    for i in range(1, 9):
+                        if str(i) in tip_states:
+                            setattr(self, f'tip{i}_active', tip_states[str(i)].get('active', False))
+                            print(f"Loaded tip {i} active state: {tip_states[str(i)].get('active', False)}")
+            else:
+                print("tip_states.json not found, using defaults")
+        except Exception as e:
+            print(f"Error loading tip states from JSON: {e}")
+    
+    async def write_initial_tip_states(self):
+        """Write initial tip active states from JSON to Modbus slave"""
+        if not self.modbus_client:
+            return
+            
+        try:
+            print("Writing initial tip active states to Modbus slave...")
+            for i in range(1, 9):
+                addr = get_tip_address(i, 'active')
+                active_state = getattr(self, f'tip{i}_active', False)
+                value = 1 if active_state else 0
+                
+                result = await self.modbus_client.write_register(addr, value, slave=self.slave_id)
+                if result.isError():
+                    print(f"Error writing initial tip {i} active state to Modbus: {result}")
+                else:
+                    print(f"Successfully wrote initial tip {i} active state {value} to Modbus address {addr}")
+                    
+        except Exception as e:
+            print(f"Error writing initial tip states to Modbus: {e}")
+    
+    async def _heartbeat_sync_tip_states(self):
+        """Periodically sync all tip active states to ensure reliability"""
+        if not self.modbus_client:
+            return
+            
+        try:
+            # Write all tip active states as a heartbeat sync
+            for i in range(1, 9):
+                addr = get_tip_address(i, 'active')
+                active_state = getattr(self, f'tip{i}_active', False)
+                value = 1 if active_state else 0
+                
+                result = await self.modbus_client.write_register(addr, value, slave=self.slave_id)
+                if result.isError():
+                    print(f"Heartbeat sync error for tip {i}: {result}")
+                    
+            print("Heartbeat sync of tip active states completed")
+        except Exception as e:
+            print(f"Error in heartbeat sync: {e}")
         
     def _initialize_properties(self):
         """Initialize all UI properties"""
@@ -90,6 +160,19 @@ class ModbusSimpleUSHSController:
         # Work position tip distances (1-8)
         self.work_tip_distances = {i: 0.0 for i in range(1, 9)}
         
+        # Heating setpoints (1-8)
+        self.heating_energy_setpoints = {i: 0.0 for i in range(1, 9)}
+        self.heating_distance_setpoints = {i: 0.0 for i in range(1, 9)}
+        self.heating_heat_start_delay_setpoints = {i: 0.0 for i in range(1, 9)}
+
+        # Monitor screen states
+        self.monitor_left_start = False
+        self.monitor_right_start = False
+        self.monitor_estop_active = False
+        self.monitor_home_switch = False
+        self.monitor_pressure_ok = False
+        self.monitor_pressure_psi = 0
+        
     async def connect_modbus(self):
         """Connect to Modbus slave"""
         try:
@@ -100,10 +183,25 @@ class ModbusSimpleUSHSController:
             
             connected = await self.modbus_client.connect()
             if connected:
-                print(f"Connected to Modbus slave on {self.serial_config['port']}")
+                print(f"✅ Connected to Modbus slave on {self.serial_config['port']}")
+                print(f"🔗 Using slave ID: {self.slave_id}")
+                
+                # Test write to verify connection
+                test_addr = get_heating_energy_address(1)  # Should be 1500
+                test_high, test_low = float_to_registers(99.9, scale=10)
+                print(f"🧪 Test write to addr {test_addr}: high={test_high}, low={test_low}")
+                test_result = await self.modbus_client.write_registers(test_addr, [test_high, test_low], slave=self.slave_id)
+                if test_result.isError():
+                    print(f"❌ Test write failed: {test_result}")
+                else:
+                    print(f"✅ Test write successful!")
+                
+                # Write initial tip active states from JSON to Modbus slave
+                await self.write_initial_tip_states()
+                
                 return True
             else:
-                print(f"Failed to connect to Modbus slave on {self.serial_config['port']}")
+                print(f"❌ Failed to connect to Modbus slave on {self.serial_config['port']}")
                 return False
                 
         except Exception as e:
@@ -126,19 +224,21 @@ class ModbusSimpleUSHSController:
             for i in range(1, 9):
                 base_addr = TIP_BASE_ADDRESSES[i]
                 
-                # Read 5 registers for each tip (active, progress, joules, distance[2])
+                # Read 4 registers for each tip (progress, joules, distance[2])
+                # NOTE: Active state is NOT read from Modbus - it comes from JSON file
+                # Skip the active register at offset 0, start from offset 1 (progress)
                 result = await self.modbus_client.read_holding_registers(
-                    base_addr, 5, slave=self.slave_id
+                    base_addr + 1, 4, slave=self.slave_id
                 )
                 
                 if not result.isError():
-                    # Parse tip data
-                    setattr(self, f'tip{i}_active', bool(result.registers[0]))
-                    setattr(self, f'tip{i}_progress', result.registers[1])
-                    setattr(self, f'tip{i}_joules', result.registers[2] / 10.0)
+                    # Parse tip data (skipping active state)
+                    # DO NOT set tip active state from Modbus
+                    setattr(self, f'tip{i}_progress', result.registers[0])  # Progress
+                    setattr(self, f'tip{i}_joules', result.registers[1] / 10.0)  # Joules
                     
                     # Distance is 32-bit (2 registers)
-                    distance = registers_to_float([result.registers[3], result.registers[4]], 1000)
+                    distance = registers_to_float([result.registers[2], result.registers[3]], 1000)
                     setattr(self, f'tip{i}_distance', distance)
                     
             # Read progress states
@@ -216,6 +316,65 @@ class ModbusSimpleUSHSController:
                         [result.registers[base_idx], result.registers[base_idx + 1]], 100
                     )
                     self.work_tip_distances[i] = distance
+                    
+            # Read heating energy setpoints
+            result = await self.modbus_client.read_holding_registers(
+                HEATING_ENERGY_BASE, 16, slave=self.slave_id  # 8 tips * 2 registers each
+            )
+            
+            if not result.isError():
+                for i in range(1, 9):
+                    base_idx = (i - 1) * 2
+                    energy = registers_to_float(
+                        [result.registers[base_idx], result.registers[base_idx + 1]], 10
+                    )
+                    self.heating_energy_setpoints[i] = energy
+                    
+            # Read heating distance setpoints
+            result = await self.modbus_client.read_holding_registers(
+                HEATING_DISTANCE_BASE, 16, slave=self.slave_id  # 8 tips * 2 registers each
+            )
+            
+            if not result.isError():
+                for i in range(1, 9):
+                    base_idx = (i - 1) * 2
+                    distance = registers_to_float(
+                        [result.registers[base_idx], result.registers[base_idx + 1]], 1000
+                    )
+                    self.heating_distance_setpoints[i] = distance
+            
+            # Read heating heat start delay setpoints
+            result = await self.modbus_client.read_holding_registers(
+                HEATING_HEAT_START_DELAY_BASE, 16, slave=self.slave_id  # 8 tips * 2 registers each
+            )
+            
+            if not result.isError():
+                for i in range(1, 9):
+                    base_idx = (i - 1) * 2
+                    heat_start_delay = registers_to_float(
+                        [result.registers[base_idx], result.registers[base_idx + 1]], 1000
+                    )
+                    self.heating_heat_start_delay_setpoints[i] = heat_start_delay
+
+            # Read monitor screen registers
+            try:
+                result = await self.modbus_client.read_holding_registers(
+                    get_monitor_address('pressure_psi'), 6, slave=self.slave_id
+                )
+                if not result.isError():
+                    self.monitor_pressure_psi = int(result.registers[0])
+                    self.monitor_left_start = bool(result.registers[1])
+                    self.monitor_right_start = bool(result.registers[2])
+                    self.monitor_estop_active = bool(result.registers[3])
+                    self.monitor_home_switch = bool(result.registers[4])
+                    self.monitor_pressure_ok = bool(result.registers[5])
+            except Exception as e:
+                # Non-fatal; continue loop
+                pass
+
+            # Note: manual controls (heating/cooling button states) are write-only from UI.
+            # We do not read them back to avoid overriding the UI's source of truth.
+            # Platen mm is already read earlier from WORK_POSITION current_position.
                 
             return True
             
@@ -369,6 +528,19 @@ class ModbusSimpleUSHSController:
                                        tip_number=i, 
                                        is_active=getattr(self, active_key))
                 
+                # Also write to Modbus continuously for reliability
+                if self.modbus_client:
+                    try:
+                        addr = get_tip_address(i, 'active')
+                        value = 1 if getattr(self, active_key) else 0
+                        result = await self.modbus_client.write_register(addr, value, slave=self.slave_id)
+                        if result.isError():
+                            print(f"Error writing tip {i} active state to Modbus: {result}")
+                        else:
+                            print(f"Continuously wrote tip {i} active state {value} to Modbus")
+                    except Exception as e:
+                        print(f"Error in continuous tip {i} active write: {e}")
+                
             # Check progress
             progress_key = f'tip{i}_progress'
             if self._has_value_changed(progress_key, getattr(self, progress_key)):
@@ -470,6 +642,77 @@ class ModbusSimpleUSHSController:
         if self._has_value_changed('work_position', work_position_data):
             await self._send_message("work_position_update", data=work_position_data)
             
+        # Send tip data for home screen (live values)
+        tips_data = {}
+        for i in range(1, 9):
+            tips_data[i] = {
+                'active': getattr(self, f'tip{i}_active'),
+                'joules': getattr(self, f'tip{i}_joules'),
+                'distance': getattr(self, f'tip{i}_distance'),
+                'progress': getattr(self, f'tip{i}_progress')
+            }
+        
+        modbus_data = {
+            'tips': tips_data
+        }
+        
+        if self._has_value_changed('tips_data', tips_data):
+            await self._send_message("modbus_update", payload=modbus_data)
+            
+        # Send heating setpoint data for heating screen
+        heating_data = {}
+        for i in range(1, 9):
+            heating_data[i] = {
+                'energy': self.heating_energy_setpoints[i],
+                'distance': self.heating_distance_setpoints[i],
+                'heat_start_delay': self.heating_heat_start_delay_setpoints[i]
+            }
+        
+        heating_modbus_data = {
+            'heating_setpoints': heating_data
+        }
+        
+        if self._has_value_changed('heating_data', heating_data):
+            await self._send_message("heating_update", payload=heating_modbus_data)
+            print(f"Sent heating setpoints update: {heating_data}")
+
+        # Send monitor screen update
+        monitor_payload = {
+            'states': {
+                'left_start': self.monitor_left_start,
+                'right_start': self.monitor_right_start,
+                'estop_active': self.monitor_estop_active,
+                'home_switch': self.monitor_home_switch,
+                'pressure_ok': self.monitor_pressure_ok,
+            },
+            'pressure_psi': int(self.monitor_pressure_psi),
+        }
+        if self._has_value_changed('monitor_payload', monitor_payload):
+            await self._send_message("monitor_update", payload=monitor_payload)
+        
+        # Periodic heartbeat sync of tip active states for reliability
+        self.heartbeat_counter += 1
+        if self.heartbeat_counter >= self.heartbeat_interval:
+            self.heartbeat_counter = 0
+            await self._heartbeat_sync_tip_states()
+
+        # Always forward manual controls snapshot to UI to avoid missed states
+        # Throttle platen updates and avoid flicker by rounding to 0.1mm
+        # Also include up/down states for visual feedback
+        if not hasattr(self, '_manual_controls_tick'):
+            self._manual_controls_tick = 0
+        self._manual_controls_tick += 1
+        display_platen = round(float(self.current_position), 1)
+        manual_payload = {
+            'platen_mm': display_platen,
+            'up_pressed': bool(self.up_button_state),
+            'down_pressed': bool(self.down_button_state),
+        }
+        # Reduce send rate: only send when changed OR every 5 cycles (~10 Hz if base is 50 Hz)
+        should_send_manual = self._has_value_changed('manual_controls_payload', manual_payload) or (self._manual_controls_tick % 5 == 0)
+        if should_send_manual:
+            await self._send_message("manual_controls_update", payload=manual_payload)
+            
     async def handle_incoming_message(self, message_data):
         """Handle messages from the UI"""
         try:
@@ -492,22 +735,44 @@ class ModbusSimpleUSHSController:
                 })
                     
             elif msg_type == 'button_press':
-                # Update button states - queue for immediate write
+                # Momentary up/down button states (write-only)
                 button = message_data.get('button')
-                state = message_data.get('state', False)
-                
+                state = bool(message_data.get('state', False))
+                if button == 'up':
+                    self.up_button_state = state
+                elif button == 'down':
+                    self.down_button_state = state
                 if button in ['up', 'down']:
-                    # Queue immediate write
-                    await self.button_write_queue.put({
-                        'type': button,
-                        'value': state
-                    })
+                    await self.button_write_queue.put({'type': button, 'value': state})
                     
             elif msg_type == 'set_work_position':
                 # Set work position command
                 if self.modbus_client:
                     addr = get_work_position_address('set_position_cmd')
                     await self.modbus_client.write_register(addr, 1, slave=self.slave_id)
+
+            elif msg_type == 'manual_heat_button':
+                # Heating button toggle
+                tip = int(message_data.get('tip', 0))
+                state = bool(message_data.get('state', False))
+                if 1 <= tip <= 8:
+                    self.manual_heating_buttons[tip] = state
+                    if self.modbus_client:
+                        try:
+                            addr = get_manual_heating_button_address(tip)
+                            await self.modbus_client.write_register(addr, 1 if state else 0, slave=self.slave_id)
+                        except Exception as e:
+                            print(f"Error writing manual heat button {tip}: {e}")
+
+            elif msg_type == 'manual_cooling':
+                state = bool(message_data.get('state', False))
+                self.manual_cooling_on = state
+                if self.modbus_client:
+                    try:
+                        addr = get_manual_cooling_address()
+                        await self.modbus_client.write_register(addr, 1 if state else 0, slave=self.slave_id)
+                    except Exception as e:
+                        print(f"Error writing manual cooling: {e}")
                     
             elif msg_type == 'request_all_values':
                 # Send all current values when page loads/reconnects
@@ -531,6 +796,116 @@ class ModbusSimpleUSHSController:
                     'tip_states': {i: getattr(self, f'tip{i}_active') for i in range(1, 9)}
                 }
                 await self._send_message("work_position_update", data=work_position_data)
+                
+            elif msg_type == 'update_tip_active':
+                # Update tip active state from heating screen
+                tip_number = message_data.get('tipNumber')
+                active = message_data.get('active', False)
+                
+                if tip_number and 1 <= tip_number <= 8:
+                    # Update local state immediately
+                    setattr(self, f'tip{tip_number}_active', active)
+                    print(f"Updated tip {tip_number} active state to {active}")
+                    
+                    # Write to Modbus for the slave to know
+                    if self.modbus_client:
+                        addr = get_tip_address(tip_number, 'active')
+                        value = 1 if active else 0
+                        result = await self.modbus_client.write_register(addr, value, slave=self.slave_id)
+                        if result.isError():
+                            print(f"Error writing tip {tip_number} active state to Modbus: {result}")
+                        else:
+                            print(f"Successfully wrote tip {tip_number} active state {value} to Modbus address {addr}")
+                    
+                    # The JSON file is already updated by the main process
+                    
+            elif msg_type == 'update_heating_energy':
+                # Write heating energy setpoint to Modbus
+                tip_number = message_data.get('tipNumber')
+                value = message_data.get('value', 0.0)
+                
+                if tip_number and 1 <= tip_number <= 8 and self.modbus_client:
+                    addr = get_heating_energy_address(tip_number)
+                    high, low = float_to_registers(value, scale=10)
+                    result = await self.modbus_client.write_registers(addr, [high, low], slave=self.slave_id)
+                    if result.isError():
+                        print(f"❌ WRITE FAILED: Tip {tip_number} energy {value}J to addr {addr}: {result}")
+                    else:
+                        print(f"✅ WROTE: Tip {tip_number} energy {value}J to addr {addr} [regs: {high},{low}]")
+                else:
+                    print(f"❌ CANNOT WRITE: tip={tip_number}, client={self.modbus_client is not None}")
+                        
+            elif msg_type == 'update_heating_distance':
+                # Write heating distance setpoint to Modbus
+                tip_number = message_data.get('tipNumber')
+                value = message_data.get('value', 0.0)
+                
+                if tip_number and 1 <= tip_number <= 8 and self.modbus_client:
+                    addr = get_heating_distance_address(tip_number)
+                    high, low = float_to_registers(value, scale=1000)
+                    result = await self.modbus_client.write_registers(addr, [high, low], slave=self.slave_id)
+                    if result.isError():
+                        print(f"❌ WRITE FAILED: Tip {tip_number} distance {value}mm to addr {addr}: {result}")
+                    else:
+                        print(f"✅ WROTE: Tip {tip_number} distance {value}mm to addr {addr} [regs: {high},{low}]")
+                else:
+                    print(f"❌ CANNOT WRITE: tip={tip_number}, client={self.modbus_client is not None}")
+                        
+            elif msg_type == 'update_heating_heat_start_delay':
+                # Write heating heat start delay setpoint to Modbus
+                tip_number = message_data.get('tipNumber')
+                value = message_data.get('value', 0.0)
+                
+                if tip_number and 1 <= tip_number <= 8 and self.modbus_client:
+                    addr = get_heating_heat_start_delay_address(tip_number)
+                    high, low = float_to_registers(value, scale=1000)
+                    result = await self.modbus_client.write_registers(addr, [high, low], slave=self.slave_id)
+                    if result.isError():
+                        print(f"❌ WRITE FAILED: Tip {tip_number} heat start delay {value}sec to addr {addr}: {result}")
+                    else:
+                        print(f"✅ WROTE: Tip {tip_number} heat start delay {value}sec to addr {addr} [regs: {high},{low}]")
+                else:
+                    print(f"❌ CANNOT WRITE: tip={tip_number}, client={self.modbus_client is not None}")
+
+            elif msg_type == 'update_configuration':
+                # Write a configuration counter to Modbus
+                key = message_data.get('key')
+                value = message_data.get('value', 0.0)
+
+                if self.modbus_client and key:
+                    try:
+                        # Determine scale by key
+                        if key in ['weld_time', 'cool_time']:
+                            scale = 100
+                        elif key in ['pulse_energy']:
+                            scale = 10
+                        else:
+                            scale = 1000
+                        addr = get_configuration_address(key)
+                        high, low = float_to_registers(value, scale=scale)
+                        result = await self.modbus_client.write_registers(addr, [high, low], slave=self.slave_id)
+                        if result.isError():
+                            print(f"❌ WRITE FAILED: Config {key}={value} to addr {addr}: {result}")
+                        else:
+                            print(f"✅ WROTE: Config {key}={value} to addr {addr} [regs: {high},{low}] scale={scale}")
+                    except Exception as e:
+                        print(f"❌ Error writing configuration {key}: {e}")
+                    
+            elif msg_type == 'request_heating_values':
+                # Send current heating setpoint values
+                # Force read from Modbus first
+                await self.read_modbus_data()
+                
+                # Send heating setpoint data
+                heating_data = {}
+                for i in range(1, 9):
+                    heating_data[i] = {
+                        'energy': self.heating_energy_setpoints[i],
+                        'distance': self.heating_distance_setpoints[i]
+                    }
+                
+                await self._send_message("heating_update", payload={'heating_setpoints': heating_data})
+                print(f"Sent heating update: {heating_data}")
                     
         except Exception as e:
             print(f"Error handling message: {e}")
@@ -672,8 +1047,8 @@ async def main():
     import argparse
     
     parser = argparse.ArgumentParser(description='Modbus Simple UI Controller')
-    parser.add_argument('--port', default='/tmp/vserial2', help='Serial port for Modbus')
-    parser.add_argument('--baudrate', type=int, default=9600, help='Baudrate for Modbus')
+    parser.add_argument('--port', default='/tmp/vserial1', help='Serial port for Modbus')
+    parser.add_argument('--baudrate', type=int, default=1000000, help='Baudrate for Modbus')
     parser.add_argument('--slave-id', type=int, default=1, help='Modbus slave ID')
     parser.add_argument('--websocket', default='ws://localhost:8080', help='WebSocket URI')
     

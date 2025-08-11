@@ -87,6 +87,21 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function requestInitialState() {
     console.log('Requesting initial work position state');
+    
+    // Load tip states from JSON file
+    if (window.electronAPI) {
+        window.electronAPI.sendMessage('read_tip_states').then(response => {
+            if (response && response.tipStates) {
+                // Apply initial tip states
+                Object.entries(response.tipStates).forEach(([tipNumber, tipData]) => {
+                    updateTipState(parseInt(tipNumber), tipData.active);
+                });
+            }
+        }).catch(error => {
+            console.error('Error loading tip states:', error);
+        });
+    }
+    
     // Send a message to request current state
     sendMessage({
         type: 'request_work_position_state'
@@ -165,6 +180,12 @@ function setupIPCListeners() {
     window.addEventListener('update-tip-state', (event) => {
         const data = event.detail;
         updateTipState(data.tipNumber, data.isActive);
+    });
+    
+    // Listen for tip state changes from heating screen
+    window.addEventListener('tip-state-changed', (event) => {
+        const { tipNumber, active } = event.detail;
+        updateTipState(tipNumber, active);
     });
 }
 
@@ -542,9 +563,7 @@ function setupEventHandlers() {
     // Set work position button handler
     if (elements.setWorkPositionButton) {
         elements.setWorkPositionButton.addEventListener('click', function() {
-            sendMessage({
-                type: 'set_work_position'
-            });
+            showConfirmOverlay();
         });
     }
 }
@@ -556,6 +575,65 @@ function sendMessage(message) {
     } else {
         console.warn('IPC not available');
     }
+}
+
+// Confirmation overlay logic
+function showConfirmOverlay() {
+    const overlay = document.getElementById('confirm-overlay');
+    const bodyText = document.getElementById('confirm-body-text');
+    const currentText = (elements.currentPositionText && elements.currentPositionText.textContent) || '0 mm';
+    const setpointText = (elements.setpointText && elements.setpointText.textContent) || '0 mm';
+    if (bodyText) {
+        bodyText.innerHTML = `Right now the distance is set from ${currentText} to ${setpointText}.<br/>If you want to set your work position tap “Confirm.”<br/>If you want to cancel it tap “Dismiss”.`;
+    }
+    if (!overlay) return;
+    overlay.style.display = 'block';
+
+    const confirmBtn = document.getElementById('btn-confirm');
+    const dismissBtn = document.getElementById('btn-dismiss');
+
+    const onDismiss = () => {
+        hideConfirmOverlay();
+        cleanup();
+    };
+
+    const onConfirm = async () => {
+        // 1) send command to hardware
+        sendMessage({ type: 'set_work_position' });
+
+        // 2) persist to JSON via main process
+        const parseMm = (t) => {
+            if (!t) return 0;
+            const n = parseFloat(String(t).replace('mm', '').trim());
+            return isNaN(n) ? 0 : n;
+        };
+        const positionMm = parseMm(currentText);
+        const setpointMm = parseMm(setpointText);
+
+        if (window.electronAPI && window.electronAPI.sendMessage) {
+            try {
+                await window.electronAPI.sendMessage('save_work_position_json', { positionMm, setpointMm });
+            } catch (e) {
+                console.error('Failed saving work position JSON:', e);
+            }
+        }
+
+        hideConfirmOverlay();
+        cleanup();
+    };
+
+    const cleanup = () => {
+        if (confirmBtn) confirmBtn.removeEventListener('click', onConfirm);
+        if (dismissBtn) dismissBtn.removeEventListener('click', onDismiss);
+    };
+
+    if (confirmBtn) confirmBtn.addEventListener('click', onConfirm);
+    if (dismissBtn) dismissBtn.addEventListener('click', onDismiss);
+}
+
+function hideConfirmOverlay() {
+    const overlay = document.getElementById('confirm-overlay');
+    if (overlay) overlay.style.display = 'none';
 }
 
 // Button state management helpers

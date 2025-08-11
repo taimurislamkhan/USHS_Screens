@@ -41,7 +41,7 @@ class ModbusSlaveGUI:
         # Default serial settings
         self.serial_config = {
             'port': '/tmp/vserial1',  # Virtual serial port
-            'baudrate': 9600,
+            'baudrate': 1000000,
             'bytesize': 8,
             'parity': 'N',
             'stopbits': 1,
@@ -78,6 +78,13 @@ class ModbusSlaveGUI:
             self.down_button = tk.BooleanVar(value=False)
         if not hasattr(self, 'tip_distances'):
             self.tip_distances = {i: tk.DoubleVar(value=0.0) for i in range(1, 9)}
+        # Manual controls defaults
+        if not hasattr(self, 'manual_platen_mm'):
+            self.manual_platen_mm = tk.DoubleVar(value=0.0)
+        if not hasattr(self, 'manual_heating_vars'):
+            self.manual_heating_vars = {i: tk.BooleanVar(value=False) for i in range(1, 9)}
+        if not hasattr(self, 'manual_cooling_var'):
+            self.manual_cooling_var = tk.BooleanVar(value=False)
         
     def create_widgets(self):
         """Create all GUI widgets"""
@@ -104,8 +111,12 @@ class ModbusSlaveGUI:
         # Baudrate
         ttk.Label(conn_frame, text="Baudrate:").grid(row=0, column=2, sticky=tk.W, padx=(0, 5))
         self.baudrate_var = tk.IntVar(value=self.serial_config['baudrate'])
-        baudrate_combo = ttk.Combobox(conn_frame, textvariable=self.baudrate_var, 
-                                      values=[9600, 19200, 38400, 57600, 115200], width=10)
+        baudrate_combo = ttk.Combobox(
+            conn_frame,
+            textvariable=self.baudrate_var,
+            values=[9600, 19200, 38400, 57600, 115200, 1000000],
+            width=10
+        )
         baudrate_combo.grid(row=0, column=3, padx=(0, 20))
         
         # Parity
@@ -176,6 +187,22 @@ class ModbusSlaveGUI:
         self.work_position_frame = self.create_work_position_tab()
         self.notebook.add(self.work_position_frame, text="Work Position")
         
+        # Heating Setpoints tab
+        self.heating_frame = self.create_heating_tab()
+        self.notebook.add(self.heating_frame, text="Heating Setpoints")
+
+        # Configuration tab
+        self.configuration_frame = self.create_configuration_tab()
+        self.notebook.add(self.configuration_frame, text="Configuration")
+
+        # Monitor tab
+        self.monitor_frame = self.create_monitor_tab()
+        self.notebook.add(self.monitor_frame, text="Monitor")
+
+        # Manual Controls tab
+        self.manual_controls_frame = self.create_manual_controls_tab()
+        self.notebook.add(self.manual_controls_frame, text="Manual Controls")
+        
         # Log tab
         self.log_frame = self.create_log_tab()
         self.notebook.add(self.log_frame, text="Log")
@@ -218,39 +245,88 @@ class ModbusSlaveGUI:
             
             self.tip_widgets[i] = {}
             
-            # Active checkbox
+            # Active checkbox (moved to heating setpoints tab)
             self.tip_widgets[i]['active'] = tk.BooleanVar(value=True if i <= 4 else False)
-            ttk.Checkbutton(frame, text="Active", variable=self.tip_widgets[i]['active'],
-                           command=lambda i=i: self.update_tip_data(i)).grid(row=0, column=0, columnspan=2, sticky=tk.W)
+            # Note: Active checkbox is now displayed in the Heating Setpoints tab
             
             # Progress
-            ttk.Label(frame, text="Progress:").grid(row=1, column=0, sticky=tk.W)
+            ttk.Label(frame, text="Progress:").grid(row=0, column=0, sticky=tk.W)
             self.tip_widgets[i]['progress'] = tk.IntVar(value=random.randint(0, 100))
             progress_scale = ttk.Scale(frame, from_=0, to=100, variable=self.tip_widgets[i]['progress'],
                                      command=lambda v, i=i: self.update_tip_data(i))
-            progress_scale.grid(row=1, column=1, sticky=(tk.W, tk.E))
+            progress_scale.grid(row=0, column=1, sticky=(tk.W, tk.E))
             self.tip_widgets[i]['progress_label'] = ttk.Label(frame, text="0%")
-            self.tip_widgets[i]['progress_label'].grid(row=1, column=2)
+            self.tip_widgets[i]['progress_label'].grid(row=0, column=2)
             
             # Joules
-            ttk.Label(frame, text="Joules:").grid(row=2, column=0, sticky=tk.W)
+            ttk.Label(frame, text="Joules:").grid(row=1, column=0, sticky=tk.W)
             self.tip_widgets[i]['joules'] = tk.DoubleVar(value=random.uniform(0, 100))
             joules_spin = ttk.Spinbox(frame, from_=0, to=999.9, increment=0.1, 
                                      textvariable=self.tip_widgets[i]['joules'],
                                      command=lambda i=i: self.update_tip_data(i))
-            joules_spin.grid(row=2, column=1, sticky=(tk.W, tk.E))
+            joules_spin.grid(row=1, column=1, sticky=(tk.W, tk.E))
             
             # Distance
-            ttk.Label(frame, text="Distance (mm):").grid(row=3, column=0, sticky=tk.W)
+            ttk.Label(frame, text="Distance (mm):").grid(row=2, column=0, sticky=tk.W)
             self.tip_widgets[i]['distance'] = tk.DoubleVar(value=random.uniform(0, 10))
             distance_spin = ttk.Spinbox(frame, from_=0, to=99.999, increment=0.001, 
                                        textvariable=self.tip_widgets[i]['distance'],
                                        command=lambda i=i: self.update_tip_data(i))
-            distance_spin.grid(row=3, column=1, sticky=(tk.W, tk.E))
+            distance_spin.grid(row=2, column=1, sticky=(tk.W, tk.E))
             
             frame.columnconfigure(1, weight=1)
             
         return tips_frame
+
+    def create_manual_controls_tab(self):
+        """Create Manual Controls tab for heating buttons, cooling, and platen position"""
+        frame = ttk.Frame(self.notebook, padding="10")
+
+        # Platen position (readback) with spinner
+        platen_box = ttk.LabelFrame(frame, text="Platen Position (mm)", padding="10")
+        platen_box.grid(row=0, column=0, sticky=(tk.W, tk.E), padx=10, pady=10)
+        self.manual_platen_mm = tk.DoubleVar(value=0.0)
+        self.platen_spin = ttk.Spinbox(platen_box, from_=0, to=999.9, increment=0.1,
+                                       textvariable=self.manual_platen_mm, width=10)
+        self.platen_spin.grid(row=0, column=0, padx=5)
+        self.platen_spin.bind('<KeyRelease>', lambda e: self.update_manual_controls_data())
+        self.platen_spin.bind('<ButtonRelease-1>', lambda e: self.update_manual_controls_data())
+
+        # Heating buttons 1..8
+        heat_box = ttk.LabelFrame(frame, text="Heating Buttons", padding="10")
+        heat_box.grid(row=1, column=0, sticky=(tk.W, tk.E), padx=10, pady=10)
+        self.manual_heating_vars = {}
+        for i in range(1, 9):
+            var = tk.BooleanVar(value=False)
+            self.manual_heating_vars[i] = var
+            ttk.Checkbutton(heat_box, text=f"Tip {i}", variable=var,
+                            command=lambda i=i: self.update_manual_controls_data()).grid(
+                row=(i-1)//4, column=(i-1)%4, padx=5, pady=5, sticky=tk.W)
+
+        # Cooling button
+        cool_box = ttk.LabelFrame(frame, text="Cooling", padding="10")
+        cool_box.grid(row=2, column=0, sticky=(tk.W, tk.E), padx=10, pady=10)
+        self.manual_cooling_var = tk.BooleanVar(value=False)
+        ttk.Checkbutton(cool_box, text="Cooling On", variable=self.manual_cooling_var,
+                        command=self.update_manual_controls_data).grid(row=0, column=0, sticky=tk.W)
+
+        # Up/Down button states (shared with Work Position)
+        buttons_box = ttk.LabelFrame(frame, text="Platen Buttons", padding="10")
+        buttons_box.grid(row=3, column=0, sticky=(tk.W, tk.E), padx=10, pady=10)
+        # Ensure variables exist
+        if not hasattr(self, 'up_button'):
+            self.up_button = tk.BooleanVar(value=False)
+        if not hasattr(self, 'down_button'):
+            self.down_button = tk.BooleanVar(value=False)
+        ttk.Checkbutton(buttons_box, text="Up Button Pressed",
+                        variable=self.up_button,
+                        command=self.update_manual_controls_data).grid(row=0, column=0, sticky=tk.W)
+        ttk.Checkbutton(buttons_box, text="Down Button Pressed",
+                        variable=self.down_button,
+                        command=self.update_manual_controls_data).grid(row=0, column=1, sticky=tk.W, padx=(20, 0))
+
+        frame.columnconfigure(0, weight=1)
+        return frame
         
     def create_progress_tab(self):
         """Create the progress states tab"""
@@ -415,6 +491,99 @@ class ModbusSlaveGUI:
         
         return work_frame
         
+    def create_heating_tab(self):
+        """Create the heating setpoints tab"""
+        heating_frame = ttk.Frame(self.notebook)
+        
+        # Create a canvas for scrolling
+        canvas = tk.Canvas(heating_frame)
+        scrollbar = ttk.Scrollbar(heating_frame, orient="vertical", command=canvas.yview)
+        scrollable_frame = ttk.Frame(canvas)
+        
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+        # Initialize widgets dictionary
+        self.heating_widgets = {}
+        
+        # Create widgets for each tip
+        for i in range(1, 9):
+            frame = ttk.LabelFrame(scrollable_frame, text=f"Tip {i} Setpoints", padding="10")
+            frame.grid(row=(i-1)//2, column=(i-1)%2, padx=10, pady=5, sticky=(tk.W, tk.E))
+            
+            self.heating_widgets[i] = {}
+            
+            # Active checkbox (moved from tips tab)
+            self.heating_widgets[i]['active'] = self.tip_widgets[i]['active']  # Share with tip widgets
+            ttk.Checkbutton(frame, text="Active", variable=self.heating_widgets[i]['active'],
+                           command=lambda i=i: self.update_tip_data(i)).grid(row=0, column=0, columnspan=2, sticky=tk.W)
+            
+            # Energy setpoint (display only)
+            ttk.Label(frame, text="Energy (J):").grid(row=1, column=0, sticky=tk.W)
+            self.heating_widgets[i]['energy'] = tk.DoubleVar(value=0.0)
+            energy_label = ttk.Label(frame, textvariable=self.heating_widgets[i]['energy'], 
+                                   relief=tk.SUNKEN, anchor=tk.W)
+            energy_label.grid(row=1, column=1, sticky=(tk.W, tk.E), padx=5)
+            
+            # Distance setpoint (display only)
+            ttk.Label(frame, text="Distance (mm):").grid(row=2, column=0, sticky=tk.W)
+            self.heating_widgets[i]['distance'] = tk.DoubleVar(value=0.0)
+            distance_label = ttk.Label(frame, textvariable=self.heating_widgets[i]['distance'], 
+                                     relief=tk.SUNKEN, anchor=tk.W)
+            distance_label.grid(row=2, column=1, sticky=(tk.W, tk.E), padx=5)
+            
+            # Heat start delay setpoint (display only)
+            ttk.Label(frame, text="Heat Start Delay (sec):").grid(row=3, column=0, sticky=tk.W)
+            self.heating_widgets[i]['heat_start_delay'] = tk.DoubleVar(value=0.0)
+            heat_start_delay_label = ttk.Label(frame, textvariable=self.heating_widgets[i]['heat_start_delay'], 
+                                             relief=tk.SUNKEN, anchor=tk.W)
+            heat_start_delay_label.grid(row=3, column=1, sticky=(tk.W, tk.E), padx=5)
+            
+            frame.columnconfigure(1, weight=1)
+            
+        return heating_frame
+        
+    def create_monitor_tab(self):
+        """Create the Monitor screen tab (5 states + pressure PSI)"""
+        frame = ttk.Frame(self.notebook, padding="20")
+        self.monitor_vars = {
+            'pressure_psi': tk.IntVar(value=0),
+            'left_start': tk.BooleanVar(value=False),
+            'right_start': tk.BooleanVar(value=False),
+            'estop_active': tk.BooleanVar(value=False),
+            'home_switch': tk.BooleanVar(value=False),
+            'pressure_ok': tk.BooleanVar(value=False),
+        }
+
+        # Layout
+        ttk.Label(frame, text="Pressure (PSI):").grid(row=0, column=0, sticky=tk.W, padx=10, pady=5)
+        psi_spin = ttk.Spinbox(frame, from_=0, to=1000, textvariable=self.monitor_vars['pressure_psi'], width=10,
+                                command=self.update_monitor_data)
+        psi_spin.grid(row=0, column=1, sticky=tk.W, padx=10, pady=5)
+
+        checks = [
+            ("Left Start", 'left_start'),
+            ("Right Start", 'right_start'),
+            ("E-Stop Active", 'estop_active'),
+            ("Home Switch", 'home_switch'),
+            ("Pressure OK", 'pressure_ok'),
+        ]
+        for idx, (label, key) in enumerate(checks, start=1):
+            ttk.Checkbutton(frame, text=label, variable=self.monitor_vars[key],
+                            command=self.update_monitor_data).grid(row=idx, column=0, columnspan=2, sticky=tk.W, padx=10, pady=5)
+
+        return frame
+        
+
+        
     def create_log_tab(self):
         """Create the log display tab"""
         log_frame = ttk.Frame(self.notebook, padding="10")
@@ -431,13 +600,18 @@ class ModbusSlaveGUI:
         self.autoscroll_var = tk.BooleanVar(value=True)
         ttk.Checkbutton(button_frame, text="Auto-scroll", variable=self.autoscroll_var).pack(side=tk.LEFT, padx=5)
         
+        # Debug buttons
+        ttk.Button(button_frame, text="Debug Data Store", command=self.debug_data_store).pack(side=tk.LEFT, padx=5)
+        ttk.Button(button_frame, text="Manual Test Write", command=self.manual_write_test).pack(side=tk.LEFT, padx=5)
+        
         return log_frame
         
     def initialize_data(self):
         """Initialize the Modbus data store"""
         # Create data blocks
-        # Using a large block to cover all our addresses (0-1300)
-        block = ModbusSequentialDataBlock(0, [0] * 1300)
+        # Using a large block to cover all our addresses (0-2000 to include manual controls)
+        # Manual controls extend up to 1915+, so allocate >= 2000 registers
+        block = ModbusSequentialDataBlock(0, [0] * 2000)
         
         self.data_store = ModbusSlaveContext(
             di=block,
@@ -447,6 +621,15 @@ class ModbusSlaveGUI:
         )
         
         self.context = ModbusServerContext(slaves={self.slave_id: self.data_store}, single=False)
+        print(f"🔗 Created server context with slave ID {self.slave_id}")
+        # Note: slaves might be a property/method in different pymodbus versions
+        try:
+            if hasattr(self.context, 'slaves') and hasattr(self.context.slaves, 'keys'):
+                print(f"🔗 Available slaves in context: {list(self.context.slaves.keys())}")
+            else:
+                print(f"🔗 Server context created successfully (slaves access not available)")
+        except Exception as e:
+            print(f"🔗 Server context created (debug info unavailable: {e})")
         
         # Initialize with current GUI values
         self.update_all_modbus_data()
@@ -479,12 +662,40 @@ class ModbusSlaveGUI:
         # Update text data
         self.update_text_data()
         
+        # Update configuration counters
+        self.update_configuration_data()
+
         # Update work position data
         self.update_work_position_data()
         
         # Update all tip distances
         for i in range(1, 9):
             self.update_tip_distance(i)
+
+        # Update monitor screen registers
+        self.update_monitor_data()
+
+        # Update manual controls registers
+        self.update_manual_controls_data()
+            
+        # Initialize heating setpoints to zero
+        # Actual values come from the heating screen via Modbus writes
+        for i in range(1, 9):
+            energy_addr = get_heating_energy_address(i)
+            distance_addr = get_heating_distance_address(i)
+            heat_start_delay_addr = get_heating_heat_start_delay_address(i)
+            
+            # Initialize energy to 0
+            high, low = float_to_registers(0.0, scale=10)
+            self.data_store.setValues(3, energy_addr, [high, low])
+            
+            # Initialize distance to 0
+            high, low = float_to_registers(0.0, scale=1000)
+            self.data_store.setValues(3, distance_addr, [high, low])
+            
+            # Initialize heat start delay to 0
+            high, low = float_to_registers(0.0, scale=1000)
+            self.data_store.setValues(3, heat_start_delay_addr, [high, low])
         
     def update_tip_data(self, tip_num):
         """Update Modbus registers for a specific tip"""
@@ -514,6 +725,31 @@ class ModbusSlaveGUI:
         self.data_store.setValues(3, addr, distance_regs)
         
         self.log(f"Updated Tip {tip_num} data")
+
+    def update_manual_controls_data(self):
+        """Update Manual Controls Modbus registers"""
+        if not self.data_store:
+            return
+        try:
+            # Heating buttons
+            for i in range(1, 9):
+                btn_addr = get_manual_heating_button_address(i)
+                val = 1 if self.manual_heating_vars.get(i, tk.BooleanVar(value=False)).get() else 0
+                self.data_store.setValues(3, btn_addr, [val])
+
+            # Cooling
+            cool_addr = get_manual_cooling_address()
+            self.data_store.setValues(3, cool_addr, [1 if self.manual_cooling_var.get() else 0])
+
+            # Up/Down button states (write-only for UI -> Modbus)
+            up_addr = get_work_position_address('up_button_state')
+            self.data_store.setValues(3, up_addr, [1 if self.up_button.get() else 0])
+            down_addr = get_work_position_address('down_button_state')
+            self.data_store.setValues(3, down_addr, [1 if self.down_button.get() else 0])
+
+            self.log("Updated manual controls data")
+        except Exception as e:
+            self.log(f"Error updating manual controls: {e}")
         
     def update_progress_data(self, state_name):
         """Update Modbus register for a progress state"""
@@ -608,6 +844,36 @@ class ModbusSlaveGUI:
         self.data_store.setValues(3, addr, registers)
         
         self.log(f"Updated tip {tip_number} distance: {distance:.1f} mm")
+
+    def update_monitor_data(self):
+        """Write monitor values to Modbus registers"""
+        if not self.data_store or not hasattr(self, 'monitor_vars'):
+            return
+        try:
+            self.data_store.setValues(3, get_monitor_address('pressure_psi'), [int(self.monitor_vars['pressure_psi'].get())])
+            self.data_store.setValues(3, get_monitor_address('left_start'), [1 if self.monitor_vars['left_start'].get() else 0])
+            self.data_store.setValues(3, get_monitor_address('right_start'), [1 if self.monitor_vars['right_start'].get() else 0])
+            self.data_store.setValues(3, get_monitor_address('estop_active'), [1 if self.monitor_vars['estop_active'].get() else 0])
+            self.data_store.setValues(3, get_monitor_address('home_switch'), [1 if self.monitor_vars['home_switch'].get() else 0])
+            self.data_store.setValues(3, get_monitor_address('pressure_ok'), [1 if self.monitor_vars['pressure_ok'].get() else 0])
+            self.log("Updated monitor data")
+        except Exception as e:
+            self.log(f"Error updating monitor data: {e}")
+
+    def read_monitor_from_modbus(self):
+        """Read monitor registers and update GUI controls"""
+        if not self.data_store or not hasattr(self, 'monitor_vars'):
+            return
+        try:
+            regs = self.data_store.getValues(3, get_monitor_address('pressure_psi'), 6)
+            self.monitor_vars['pressure_psi'].set(int(regs[0]))
+            self.monitor_vars['left_start'].set(bool(regs[1]))
+            self.monitor_vars['right_start'].set(bool(regs[2]))
+            self.monitor_vars['estop_active'].set(bool(regs[3]))
+            self.monitor_vars['home_switch'].set(bool(regs[4]))
+            self.monitor_vars['pressure_ok'].set(bool(regs[5]))
+        except Exception:
+            pass
         
     def toggle_server(self):
         """Start or stop the Modbus server"""
@@ -675,6 +941,13 @@ class ModbusSlaveGUI:
         
         async def serve():
             try:
+                print(f"🚀 Starting Modbus slave server on {self.serial_config['port']}")
+                print(f"📊 Data store covers addresses 0-1799 (1800 registers)")
+                print(f"🎯 Heating energy addresses: 1500-1515")
+                print(f"🎯 Heating distance addresses: 1600-1615") 
+                print(f"🎯 Heat start delay addresses: 1700-1715")
+                print(f"🎯 Configuration counters: 1800-1811")
+                
                 # Create and configure the server
                 server = await StartAsyncSerialServer(
                     context=self.context,
@@ -686,6 +959,8 @@ class ModbusSlaveGUI:
                     stopbits=self.serial_config['stopbits'],
                     timeout=self.serial_config['timeout']
                 )
+                
+                print(f"✅ Modbus slave server started successfully")
                 
                 # Run until stop event
                 while not self.stop_event.is_set():
@@ -712,11 +987,250 @@ class ModbusSlaveGUI:
                 # Read work position data from Modbus and update GUI
                 self.read_work_position_from_modbus()
                 
+                # Read heating setpoints from Modbus and update GUI display
+                self.read_heating_setpoints_from_modbus()
+
+                # Read configuration counters from Modbus and update GUI display
+                self.read_configuration_from_modbus()
+                
+                # Read tip active states from Modbus and update GUI
+                self.read_tip_states_from_modbus()
+
+                # Read monitor data
+                self.read_monitor_from_modbus()
+
+                # Read manual controls (heating buttons, cooling, platen position)
+                self.read_manual_controls_from_modbus()
+                
                 # Update all Modbus data
                 self.update_all_modbus_data()
                 last_update = current_time
                 
             time.sleep(0.001)  # Small sleep to prevent CPU hogging
+
+    def read_manual_controls_from_modbus(self):
+        """Read manual controls registers and update GUI controls"""
+        if not self.data_store:
+            return
+        try:
+            # Read platen position from WORK_POSITION current_position and display in manual tab
+            addr_pos = get_work_position_address('current_position')
+            regs = self.data_store.getValues(3, addr_pos, 2)
+            platen_value = registers_to_float(regs, 100)
+            if hasattr(self, 'manual_platen_mm'):
+                # Only update if changed to avoid unnecessary churn
+                if abs(self.manual_platen_mm.get() - platen_value) > 1e-3:
+                    self.manual_platen_mm.set(round(platen_value, 1))
+
+            # Read Up/Down button states
+            try:
+                up_addr = get_work_position_address('up_button_state')
+                up_val = self.data_store.getValues(3, up_addr, 1)[0]
+                if hasattr(self, 'up_button'):
+                    if bool(up_val) != self.up_button.get():
+                        self.up_button.set(bool(up_val))
+                down_addr = get_work_position_address('down_button_state')
+                down_val = self.data_store.getValues(3, down_addr, 1)[0]
+                if hasattr(self, 'down_button'):
+                    if bool(down_val) != self.down_button.get():
+                        self.down_button.set(bool(down_val))
+            except Exception:
+                pass
+
+            # Read heating buttons 1..8
+            for i in range(1, 9):
+                btn_addr = get_manual_heating_button_address(i)
+                val = self.data_store.getValues(3, btn_addr, 1)[0]
+                if hasattr(self, 'manual_heating_vars') and i in self.manual_heating_vars:
+                    current = self.manual_heating_vars[i].get()
+                    if bool(val) != current:
+                        self.manual_heating_vars[i].set(bool(val))
+
+            # Read cooling button
+            cool_addr = get_manual_cooling_address()
+            cool_val = self.data_store.getValues(3, cool_addr, 1)[0]
+            if hasattr(self, 'manual_cooling_var'):
+                if bool(cool_val) != self.manual_cooling_var.get():
+                    self.manual_cooling_var.set(bool(cool_val))
+        except Exception:
+            # Silent fail to keep loop robust
+            pass
+    
+    def read_heating_setpoints_from_modbus(self):
+        """Read heating setpoints from Modbus registers and update GUI display"""
+        if not self.data_store:
+            return
+            
+        try:
+            # Read energy and distance setpoints for all tips
+            for i in range(1, 9):
+                # Read energy setpoint (32-bit float)
+                energy_addr = get_heating_energy_address(i)
+                energy_regs = self.data_store.getValues(3, energy_addr, 2)
+                # Removed debug spam - use manual debug buttons instead
+                energy = registers_to_float(energy_regs, scale=10)
+                old_value = self.heating_widgets[i]['energy'].get()
+                if energy != old_value and energy != 0.0:  # Only log real changes, not zeros
+                    print(f"🔄 HEATING SETPOINT CHANGE: Tip {i} energy: {old_value} → {energy} J")
+                self.heating_widgets[i]['energy'].set(round(energy, 1))
+                
+                # Read distance setpoint (32-bit float)
+                distance_addr = get_heating_distance_address(i)
+                distance_regs = self.data_store.getValues(3, distance_addr, 2)
+                distance = registers_to_float(distance_regs, scale=1000)
+                old_value = self.heating_widgets[i]['distance'].get()
+                if distance != old_value and distance != 0.0:  # Only log real changes, not zeros
+                    print(f"🔄 HEATING SETPOINT CHANGE: Tip {i} distance: {old_value} → {distance} mm")
+                self.heating_widgets[i]['distance'].set(round(distance, 3))
+                
+                # Read heat start delay setpoint (32-bit float)
+                heat_start_delay_addr = get_heating_heat_start_delay_address(i)
+                heat_start_delay_regs = self.data_store.getValues(3, heat_start_delay_addr, 2)
+                heat_start_delay = registers_to_float(heat_start_delay_regs, scale=1000)
+                old_value = self.heating_widgets[i]['heat_start_delay'].get()
+                if heat_start_delay != old_value and heat_start_delay != 0.0:  # Only log real changes, not zeros
+                    print(f"🔄 HEATING SETPOINT CHANGE: Tip {i} heat start delay: {old_value} → {heat_start_delay} sec")
+                self.heating_widgets[i]['heat_start_delay'].set(round(heat_start_delay, 3))
+                
+        except Exception as e:
+            print(f"❌ Error reading heating setpoints: {e}")
+            import traceback
+            traceback.print_exc()
+
+    def create_configuration_tab(self):
+        """Create the Configuration counters tab"""
+        config_frame = ttk.Frame(self.notebook)
+
+        # Grid layout
+        labels = [
+            ("Weld Time (sec)", 'weld_time'),
+            ("Pulse Energy (J)", 'pulse_energy'),
+            ("Cool Time (sec)", 'cool_time'),
+            ("Presence Height (mm)", 'presence_height'),
+            ("Boss Tolerance - (mm)", 'boss_tolerance_minus'),
+            ("Boss Tolerance + (mm)", 'boss_tolerance_plus'),
+        ]
+
+        self.configuration_vars = {}
+        row = 0
+        for label_text, key in labels:
+            ttk.Label(config_frame, text=label_text).grid(row=row, column=0, sticky=tk.W, padx=10, pady=5)
+            var = tk.DoubleVar(value=0.0)
+            self.configuration_vars[key] = var
+            value_label = ttk.Label(config_frame, textvariable=var)
+            value_label.grid(row=row, column=1, sticky=tk.W, padx=10, pady=5)
+            row += 1
+
+        return config_frame
+
+    def update_configuration_data(self):
+        """Write configuration counters to Modbus registers from GUI vars"""
+        if not self.data_store or not hasattr(self, 'configuration_vars'):
+            return
+        try:
+            # Scales: weld_time, cool_time (scale 100); pulse_energy (scale 10); others (scale 1000)
+            def write_scaled(name, scale):
+                addr = get_configuration_address(name)
+                high, low = float_to_registers(self.configuration_vars[name].get(), scale=scale)
+                self.data_store.setValues(3, addr, [high, low])
+
+            write_scaled('weld_time', 100)
+            write_scaled('pulse_energy', 10)
+            write_scaled('cool_time', 100)
+            write_scaled('presence_height', 1000)
+            write_scaled('boss_tolerance_minus', 1000)
+            write_scaled('boss_tolerance_plus', 1000)
+        except Exception as e:
+            self.log(f"Error updating configuration data: {e}")
+
+    def read_configuration_from_modbus(self):
+        """Read configuration counters from Modbus and update GUI"""
+        if not self.data_store or not hasattr(self, 'configuration_vars'):
+            return
+        try:
+            def read_scaled(name, scale):
+                addr = get_configuration_address(name)
+                regs = self.data_store.getValues(3, addr, 2)
+                return registers_to_float(regs, scale=scale)
+
+            self.configuration_vars['weld_time'].set(round(read_scaled('weld_time', 100), 2))
+            self.configuration_vars['pulse_energy'].set(round(read_scaled('pulse_energy', 10), 1))
+            self.configuration_vars['cool_time'].set(round(read_scaled('cool_time', 100), 2))
+            self.configuration_vars['presence_height'].set(round(read_scaled('presence_height', 1000), 3))
+            self.configuration_vars['boss_tolerance_minus'].set(round(read_scaled('boss_tolerance_minus', 1000), 3))
+            self.configuration_vars['boss_tolerance_plus'].set(round(read_scaled('boss_tolerance_plus', 1000), 3))
+        except Exception as e:
+            self.log(f"Error reading configuration data: {e}")
+    
+    def debug_data_store(self):
+        """Debug function to manually inspect data store contents"""
+        if not self.data_store:
+            print("❌ No data store available")
+            return
+            
+        print("🔍 Data store inspection:")
+        # Check a few key addresses
+        test_addresses = [1500, 1501, 1600, 1601, 1700, 1701]  # tip 1 energy, distance, heat start delay
+        for addr in test_addresses:
+            try:
+                value = self.data_store.getValues(3, addr, 1)[0]
+                print(f"  Address {addr}: {value}")
+            except Exception as e:
+                print(f"  Address {addr}: ERROR - {e}")
+        
+        # Check if context has the right slave ID
+        try:
+            if hasattr(self.context, 'slaves') and hasattr(self.context.slaves, 'keys'):
+                print(f"🔗 Available slave contexts: {list(self.context.slaves.keys())}")
+            else:
+                print(f"🔗 Context slaves info not available")
+        except:
+            print(f"🔗 Context slaves info not accessible")
+        print(f"🔗 Using slave ID: {self.slave_id}")
+    
+    def manual_write_test(self):
+        """Manually write test values to heating setpoints"""
+        if not self.data_store:
+            print("❌ No data store available")
+            return
+            
+        print("🧪 Manual test write to heating setpoints...")
+        try:
+            # Write test values directly to data store
+            energy_addr = get_heating_energy_address(1)  # 1500
+            test_regs = float_to_registers(42.5, scale=10)  # Should be [0, 425]
+            self.data_store.setValues(3, energy_addr, test_regs)
+            print(f"✅ Wrote test energy value 42.5 to addr {energy_addr} as {test_regs}")
+            
+            # Read it back
+            read_regs = self.data_store.getValues(3, energy_addr, 2)
+            read_value = registers_to_float(read_regs, scale=10)
+            print(f"✅ Read back: {read_value} from regs {read_regs}")
+            
+        except Exception as e:
+            print(f"❌ Manual test failed: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    def read_tip_states_from_modbus(self):
+        """Read tip active states from Modbus registers and update GUI"""
+        if not self.data_store:
+            return
+            
+        try:
+            # Read active states for all tips
+            for i in range(1, 9):
+                addr = get_tip_address(i, 'active')
+                value = self.data_store.getValues(3, addr, 1)[0]
+                current_state = self.tip_widgets[i]['active'].get()
+                if bool(value) != current_state:
+                    self.tip_widgets[i]['active'].set(bool(value))
+                    # Also update heating widgets since they share the same variable
+                    if i in self.heating_widgets:
+                        self.heating_widgets[i]['active'].set(bool(value))
+                    print(f"Updated tip {i} active state to {bool(value)} from Modbus")
+        except Exception as e:
+            print(f"Error reading tip states: {e}")
     
     def read_work_position_from_modbus(self):
         """Read work position data from Modbus registers and update GUI"""
@@ -953,4 +1467,10 @@ class ModbusSlaveGUI:
 
 if __name__ == "__main__":
     app = ModbusSlaveGUI()
+    # Auto-start the Modbus server with default settings for faster startup
+    try:
+        app.start_server()
+    except Exception:
+        # If auto-start fails, allow the GUI to remain usable
+        pass
     app.run()

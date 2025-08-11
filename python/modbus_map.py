@@ -20,11 +20,16 @@ Address Range Organization:
 - 1200-1299: Banner and text strings
 - 1300-1399: Work position data
 - 1400-1499: Work position tip distances
+- 1500-1599: Heating setpoints (energy)
+ - 1600-1699: Heating setpoints (distance)
+ - 1700-1799: Heating setpoints (heat start delay)
+ - 1800-1899: Configuration screen counters (6 values, 2 regs each)
+ - 1900-1999: Manual controls (buttons, cooling, etc.)
 """
 
 # System Configuration Registers (0-99)
 SYSTEM_CONFIG = {
-    'baudrate': 0,          # 9600, 19200, 38400, 57600, 115200
+    'baudrate': 0,          # 9600, 19200, 38400, 57600, 115200, 1000000
     'parity': 1,            # 0=None, 1=Even, 2=Odd
     'stopbits': 2,          # 1 or 2
     'bytesize': 3,          # 7 or 8
@@ -70,6 +75,33 @@ GENERAL_UI = {
     'slider_percentage': 1102,  # 0-100 (1 register)
 }
 
+# Monitor screen statuses (re-using the 1100-1199 range)
+# All values are single-register integers unless noted
+MONITOR_STATUS = {
+    'pressure_psi': 1103,     # PSI value (integer)
+    'left_start': 1104,       # 0/1
+    'right_start': 1105,      # 0/1
+    'estop_active': 1106,     # 0/1
+    'home_switch': 1107,      # 0/1
+    'pressure_ok': 1108,      # 0/1
+}
+
+# Manual Controls (1900-1999)
+# Discrete button states as single holding registers (0/1)
+# The platen up/down buttons continue to use WORK_POSITION addresses
+# so they are shared consistently across screens.
+MANUAL_CONTROLS = {
+    'heating_button_1': 1900,
+    'heating_button_2': 1901,
+    'heating_button_3': 1902,
+    'heating_button_4': 1903,
+    'heating_button_5': 1904,
+    'heating_button_6': 1905,
+    'heating_button_7': 1906,
+    'heating_button_8': 1907,
+    'cooling_button': 1908,
+}
+
 # Banner and Text Strings (1200-1299)
 # Strings are stored as multiple registers (2 chars per register)
 TEXT_STRINGS = {
@@ -91,6 +123,31 @@ WORK_POSITION = {
 # Each tip uses 2 registers for distance (32-bit float)
 WORK_POSITION_TIP_BASE = 1400
 WORK_POSITION_TIP_OFFSET = 2  # 2 registers per tip for distance
+
+# Heating Setpoints (1500-1699)
+# Energy setpoints (1500-1515) - 2 registers per tip for energy (32-bit float)
+HEATING_ENERGY_BASE = 1500
+HEATING_ENERGY_OFFSET = 2  # 2 registers per tip
+
+# Distance setpoints (1600-1615) - 2 registers per tip for distance (32-bit float)
+HEATING_DISTANCE_BASE = 1600
+HEATING_DISTANCE_OFFSET = 2  # 2 registers per tip
+
+# Heat start delay setpoints (1700-1715) - 2 registers per tip for delay (32-bit float)
+HEATING_HEAT_START_DELAY_BASE = 1700
+HEATING_HEAT_START_DELAY_OFFSET = 2  # 2 registers per tip
+
+# Configuration Screen (1800-1899)
+# Six counters stored as 32-bit scaled values (2 registers each)
+CONFIGURATION_BASE = 1800
+CONFIGURATION_OFFSETS = {
+    'weld_time': 0,              # seconds, scale 100
+    'pulse_energy': 2,           # joules, scale 10
+    'cool_time': 4,              # seconds, scale 100
+    'presence_height': 6,        # mm, scale 1000
+    'boss_tolerance_minus': 8,   # mm, scale 1000
+    'boss_tolerance_plus': 10,   # mm, scale 1000
+}
 
 # Helper functions for address calculation
 def get_tip_address(tip_number, parameter):
@@ -114,6 +171,12 @@ def get_general_ui_address(parameter):
         raise ValueError(f"Invalid general UI parameter: {parameter}")
     return GENERAL_UI[parameter]
 
+def get_monitor_address(parameter):
+    """Get the Modbus address for monitor screen parameters"""
+    if parameter not in MONITOR_STATUS:
+        raise ValueError(f"Invalid monitor parameter: {parameter}")
+    return MONITOR_STATUS[parameter]
+
 def get_work_position_address(parameter):
     """Get the Modbus address for work position parameters"""
     if parameter not in WORK_POSITION:
@@ -125,6 +188,40 @@ def get_work_position_tip_distance_address(tip_number):
     if not 1 <= tip_number <= 8:
         raise ValueError(f"Invalid tip number: {tip_number}")
     return WORK_POSITION_TIP_BASE + (tip_number - 1) * WORK_POSITION_TIP_OFFSET
+
+def get_manual_heating_button_address(tip_number):
+    """Get the Modbus address for a manual heating button state (1..8)"""
+    if not 1 <= tip_number <= 8:
+        raise ValueError(f"Invalid tip number: {tip_number}")
+    return MANUAL_CONTROLS['heating_button_1'] + (tip_number - 1)
+
+def get_manual_cooling_address():
+    """Get the Modbus address for the manual cooling button state"""
+    return MANUAL_CONTROLS['cooling_button']
+
+def get_heating_energy_address(tip_number):
+    """Get the Modbus address for heating energy setpoint"""
+    if not 1 <= tip_number <= 8:
+        raise ValueError(f"Invalid tip number: {tip_number}")
+    return HEATING_ENERGY_BASE + (tip_number - 1) * HEATING_ENERGY_OFFSET
+
+def get_heating_distance_address(tip_number):
+    """Get the Modbus address for heating distance setpoint"""
+    if not 1 <= tip_number <= 8:
+        raise ValueError(f"Invalid tip number: {tip_number}")
+    return HEATING_DISTANCE_BASE + (tip_number - 1) * HEATING_DISTANCE_OFFSET
+
+def get_heating_heat_start_delay_address(tip_number):
+    """Get the Modbus address for heating heat start delay setpoint"""
+    if not 1 <= tip_number <= 8:
+        raise ValueError(f"Invalid tip number: {tip_number}")
+    return HEATING_HEAT_START_DELAY_BASE + (tip_number - 1) * HEATING_HEAT_START_DELAY_OFFSET
+
+def get_configuration_address(parameter_name):
+    """Get the Modbus address for a configuration counter"""
+    if parameter_name not in CONFIGURATION_OFFSETS:
+        raise ValueError(f"Invalid configuration parameter: {parameter_name}")
+    return CONFIGURATION_BASE + CONFIGURATION_OFFSETS[parameter_name]
 
 # Data conversion helpers
 def float_to_registers(value, scale=1000):
@@ -179,6 +276,9 @@ MODBUS_READ_PACKETS = [
     
     # Packet 11: General UI (3 registers)
     {'name': 'general_ui', 'start': 1100, 'count': 3},
+
+    # Packet 11b: Monitor status (6 registers)
+    {'name': 'monitor_status', 'start': 1103, 'count': 6},
     
     # Packet 12: Banner text (20 registers)
     {'name': 'banner_text', 'start': 1200, 'count': 20},
@@ -191,4 +291,19 @@ MODBUS_READ_PACKETS = [
     
     # Packet 15: Work position tip distances (16 registers - 8 tips * 2 registers each)
     {'name': 'work_position_tips', 'start': 1400, 'count': 16},
+    
+    # Packet 16: Heating energy setpoints (16 registers - 8 tips * 2 registers each)
+    {'name': 'heating_energy', 'start': 1500, 'count': 16},
+    
+    # Packet 17: Heating distance setpoints (16 registers - 8 tips * 2 registers each)
+    {'name': 'heating_distance', 'start': 1600, 'count': 16},
+    
+    # Packet 18: Heating heat start delay setpoints (16 registers - 8 tips * 2 registers each)
+    {'name': 'heating_heat_start_delay', 'start': 1700, 'count': 16},
+
+    # Packet 19: Configuration counters (12 registers - 6 values * 2 registers each)
+    {'name': 'configuration', 'start': 1800, 'count': 12},
+
+    # Packet 20: Manual controls (allocate 16 registers for future-proofing)
+    {'name': 'manual_controls', 'start': 1900, 'count': 16},
 ]
