@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Serial Port Configuration</title>
+  <style>
+    .serial-config {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #2a2a2a;
+      border: 1px solid #3a3a3a;
+      border-radius: 8px;
+      padding: 15px;
+      font-family: Arial, sans-serif;
+      color: #f5f6f6;
+      min-width: 300px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+      z-index: 9999;
+    }
+    
+    .serial-config.minimized {
+      min-width: auto;
+      padding: 10px;
+    }
+    
+    .serial-config.minimized .serial-content {
+      display: none;
+    }
+    
+    .serial-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      cursor: pointer;
+    }
+    
+    .serial-title {
+      font-size: 14px;
+      font-weight: bold;
+    }
+    
+    .serial-status {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-left: 10px;
+    }
+    
+    .serial-status.connected {
+      background-color: #4CAF50;
+    }
+    
+    .serial-status.disconnected {
+      background-color: #f44336;
+    }
+    
+    .serial-minimize {
+      background: none;
+      border: none;
+      color: #f5f6f6;
+      cursor: pointer;
+      font-size: 18px;
+      padding: 0 5px;
+    }
+    
+    .serial-content {
+      margin-top: 10px;
+    }
+    
+    .serial-row {
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .serial-select {
+      flex: 1;
+      background: #1a1a1a;
+      border: 1px solid #3a3a3a;
+      color: #f5f6f6;
+      padding: 5px;
+      border-radius: 4px;
+    }
+    
+    .serial-button {
+      background: #007bff;
+      border: none;
+      color: white;
+      padding: 5px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    
+    .serial-button:hover {
+      background: #0056b3;
+    }
+    
+    .serial-button.refresh {
+      background: #6c757d;
+    }
+    
+    .serial-button.refresh:hover {
+      background: #5a6268;
+    }
+    
+    .serial-button.disconnect {
+      background: #dc3545;
+    }
+    
+    .serial-button.disconnect:hover {
+      background: #c82333;
+    }
+    
+    .serial-log {
+      font-size: 11px;
+      color: #999;
+      margin-top: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div id="serial-config" class="serial-config">
+    <div class="serial-header" onclick="toggleMinimize()">
+      <div>
+        <span class="serial-title">Serial Port</span>
+        <span id="serial-status" class="serial-status disconnected"></span>
+      </div>
+      <button class="serial-minimize" onclick="toggleMinimize(event)">_</button>
+    </div>
+    
+    <div class="serial-content">
+      <div class="serial-row">
+        <select id="port-select" class="serial-select">
+          <option value="">Select port...</option>
+        </select>
+        <button class="serial-button refresh" onclick="refreshPorts()">↻</button>
+      </div>
+      
+      <div class="serial-row">
+        <button id="connect-btn" class="serial-button" onclick="toggleConnection()">Connect</button>
+      </div>
+      
+      <div id="serial-log" class="serial-log"></div>
+    </div>
+  </div>
+  
+  <script>
+    let isConnected = false;
+    let currentPort = null;
+    
+    function toggleMinimize(event) {
+      if (event) event.stopPropagation();
+      const config = document.getElementById('serial-config');
+      config.classList.toggle('minimized');
+    }
+    
+    function log(message) {
+      const logDiv = document.getElementById('serial-log');
+      logDiv.textContent = message;
+    }
+    
+    async function refreshPorts() {
+      if (window.electronAPI && window.electronAPI.serial) {
+        try {
+          const ports = await window.electronAPI.serial.listPorts();
+          const select = document.getElementById('port-select');
+          
+          // Clear existing options
+          select.innerHTML = '<option value="">Select port...</option>';
+          
+          // Add port options
+          ports.forEach(port => {
+            const option = document.createElement('option');
+            option.value = port.path;
+            option.textContent = `${port.path} - ${port.manufacturer}`;
+            select.appendChild(option);
+          });
+          
+          log(`Found ${ports.length} ports`);
+        } catch (error) {
+          log(`Error: ${error.message}`);
+        }
+      }
+    }
+    
+    async function toggleConnection() {
+      if (window.electronAPI && window.electronAPI.serial) {
+        if (isConnected) {
+          await disconnect();
+        } else {
+          await connect();
+        }
+      }
+    }
+    
+    async function connect() {
+      const select = document.getElementById('port-select');
+      const port = select.value;
+      
+      if (!port) {
+        log('Please select a port');
+        return;
+      }
+      
+      try {
+        const result = await window.electronAPI.serial.connect(port, 9600);
+        if (result.success) {
+          isConnected = true;
+          currentPort = port;
+          updateUI();
+          log(`Connected to ${port}`);
+        } else {
+          log(`Failed: ${result.error}`);
+        }
+      } catch (error) {
+        log(`Error: ${error.message}`);
+      }
+    }
+    
+    async function disconnect() {
+      try {
+        await window.electronAPI.serial.disconnect();
+        isConnected = false;
+        currentPort = null;
+        updateUI();
+        log('Disconnected');
+      } catch (error) {
+        log(`Error: ${error.message}`);
+      }
+    }
+    
+    function updateUI() {
+      const status = document.getElementById('serial-status');
+      const connectBtn = document.getElementById('connect-btn');
+      const select = document.getElementById('port-select');
+      
+      if (isConnected) {
+        status.classList.remove('disconnected');
+        status.classList.add('connected');
+        connectBtn.textContent = 'Disconnect';
+        connectBtn.classList.add('disconnect');
+        select.disabled = true;
+      } else {
+        status.classList.remove('connected');
+        status.classList.add('disconnected');
+        connectBtn.textContent = 'Connect';
+        connectBtn.classList.remove('disconnect');
+        select.disabled = false;
+      }
+    }
+    
+    // Listen for serial events
+    window.addEventListener('serial-connected', (event) => {
+      isConnected = true;
+      currentPort = event.detail;
+      updateUI();
+      log(`Connected to ${event.detail}`);
+    });
+    
+    window.addEventListener('serial-disconnected', () => {
+      isConnected = false;
+      currentPort = null;
+      updateUI();
+      log('Disconnected');
+    });
+    
+    window.addEventListener('serial-error', (event) => {
+      log(`Error: ${event.detail}`);
+    });
+    
+    // Check initial status
+    async function checkStatus() {
+      if (window.electronAPI && window.electronAPI.serial) {
+        try {
+          const status = await window.electronAPI.serial.getStatus();
+          isConnected = status.connected;
+          currentPort = status.port;
+          updateUI();
+          if (isConnected) {
+            log(`Connected to ${currentPort}`);
+          }
+        } catch (error) {
+          console.error('Error checking status:', error);
+        }
+      }
+    }
+    
+    // Initialize
+    refreshPorts();
+    checkStatus();
+  </script>
+</body>
+</html>

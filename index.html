@@ -43,6 +43,8 @@
   <div id="home-container"></div>
   
   <script>
+    console.log('Index.html main script loaded');
+    
     // Session auth flag key
     const AUTH_SESSION_KEY = 'ushs_screen_auth_ok';
 
@@ -254,6 +256,7 @@
 
     // Global navigation function for Electron with auth gating
     function navigateToPage(relativePath) {
+      console.log('navigateToPage called with:', relativePath);
       const normalized = (relativePath || '').replace(/^[.][/]/, '').replace(/^\.\//, '');
       // If navigating to home, always allow and dismiss any overlays
       const isHome = normalized === '' || normalized === 'index.html' || normalized === 'index_new.html';
@@ -261,6 +264,16 @@
         if (typeof window.dismissPasswordOverlay === 'function') {
           try { window.dismissPasswordOverlay(); } catch (e) {}
         }
+        
+        // Check if we're already on index.html
+        const currentPath = window.location.pathname.split('/').pop();
+        if (currentPath === 'index.html' || currentPath === '') {
+          console.log('Already on index.html, triggering page-navigated-home event');
+          // We're already on index.html, just trigger the event to reload states
+          window.dispatchEvent(new CustomEvent('page-navigated-home'));
+          return;
+        }
+        
         if (window.electronAPI) {
           window.electronAPI.navigateToPage('index.html');
         } else {
@@ -291,11 +304,147 @@
       }
     }
 
+    // Function to update tip data displays
+    function updateTipData(tips) {
+      console.log('Updating tip data:', tips);
+      console.log('updateTipData called with', tips.length, 'tips');
+      
+      tips.forEach(tip => {
+        console.log(`Updating tip ${tip.tip_number}: ${tip.joules}J, ${tip.distance}mm, ${tip.heat_percentage}%`);
+        const tipNum = tip.tip_number;
+        
+        // Update joules display
+        const joulesActiveEl = document.getElementById(`tip-${tipNum}-joules-active`);
+        const joulesInactiveEl = document.getElementById(`tip-${tipNum}-joules-in-active`);
+        
+        if (joulesActiveEl) {
+          joulesActiveEl.textContent = `${tip.joules.toFixed(1)} J`;
+        }
+        if (joulesInactiveEl) {
+          joulesInactiveEl.textContent = `${tip.joules.toFixed(1)} J`;
+        }
+        
+        // Update distance display
+        const distanceActiveEl = document.getElementById(`tip-${tipNum}-distance-active`);
+        const distanceInactiveEl = document.getElementById(`tip-${tipNum}-distance-in-active`);
+        
+        if (distanceActiveEl) {
+          distanceActiveEl.textContent = `${tip.distance.toFixed(1)} mm`;
+        }
+        if (distanceInactiveEl) {
+          distanceInactiveEl.textContent = `${tip.distance.toFixed(1)} mm`;
+        }
+        
+        // Update heat percentage progress bars
+        const progressActiveEl = document.getElementById(`tip-${tipNum}-progress-active`);
+        const progressInactiveEl = document.getElementById(`tip-${tipNum}-progress-in-active`);
+        
+        // Calculate how many segments to fill (10 segments total)
+        const fillCount = Math.round(tip.heat_percentage / 10);
+        console.log(`Tip ${tipNum}: heat_percentage=${tip.heat_percentage}, fillCount=${fillCount}`);
+        
+        // Update active progress bar (tips 1-4)
+        if (progressActiveEl) {
+          console.log(`Updating active progress bar for tip ${tipNum}`);
+          for (let i = 1; i <= 10; i++) {
+            const fillEl = progressActiveEl.querySelector(`.progress-bar-active-fill-${i}`);
+            if (fillEl) {
+              // Override the CSS background with consistent colors using !important
+              if (i <= fillCount) {
+                fillEl.style.setProperty('background', '#ff9900', 'important'); // Full orange for filled segments
+                fillEl.style.setProperty('opacity', '1', 'important');
+              } else {
+                fillEl.style.setProperty('background', 'rgba(255, 153, 0, 0.2)', 'important'); // Faded orange for empty segments
+                fillEl.style.setProperty('opacity', '1', 'important');
+              }
+            }
+          }
+        }
+        
+        // Update inactive progress bar (tips 5-8)
+        if (progressInactiveEl) {
+          console.log(`Updating inactive progress bar for tip ${tipNum} with fillCount=${fillCount}`);
+          
+          // Debug: Check if the progress bar has the expected structure
+          const allFills = progressInactiveEl.querySelectorAll('[class^="progress-bar-in-active-fill-"]');
+          console.log(`Found ${allFills.length} fill elements in inactive progress bar for tip ${tipNum}`);
+          
+          for (let i = 1; i <= 10; i++) {
+            const fillEl = progressInactiveEl.querySelector(`.progress-bar-in-active-fill-${i}`);
+            if (fillEl) {
+              // Override the CSS background with consistent colors using !important
+              if (i <= fillCount) {
+                fillEl.style.setProperty('background', '#525660', 'important'); // Full gray for filled segments
+                fillEl.style.setProperty('opacity', '1', 'important');
+                console.log(`Set fill ${i} to full gray for tip ${tipNum}`);
+              } else {
+                fillEl.style.setProperty('background', 'rgba(82, 86, 96, 0.2)', 'important'); // Faded gray for empty segments
+                fillEl.style.setProperty('opacity', '1', 'important');
+              }
+            } else {
+              console.warn(`Could not find .progress-bar-in-active-fill-${i} for tip ${tipNum}`);
+            }
+          }
+        } else {
+          console.warn(`Progress bar element #tip-${tipNum}-progress-in-active not found`);
+        }
+      });
+    }
+
+    // Listen for tip data updates
+    window.addEventListener('tip-data-update', (event) => {
+      console.log('Index.html received tip data update event');
+      console.log('Event detail:', event.detail);
+      if (event.detail) {
+        // Handle new format where event.detail can be either array (old) or object with tips/cycleProgress/homeScreen (new)
+        const tipData = Array.isArray(event.detail) ? event.detail : event.detail.tips;
+        const cycleProgress = !Array.isArray(event.detail) ? event.detail.cycleProgress : null;
+        const homeScreen = !Array.isArray(event.detail) ? event.detail.homeScreen : null;
+        
+        // If cycle progress is included, update it
+        if (cycleProgress) {
+          console.log('Updating cycle progress from tip-data-update:', cycleProgress);
+          window.dispatchEvent(new CustomEvent('update-progress-states', { 
+            detail: cycleProgress 
+          }));
+        }
+        
+        // If home screen data is included, forward it
+        if (homeScreen) {
+          console.log('Forwarding home screen data from tip-data-update:', homeScreen);
+          window.dispatchEvent(new CustomEvent('home-screen-update', { 
+            detail: homeScreen 
+          }));
+        }
+        
+        // Add a delay to ensure DOM is ready, especially after navigation
+        const updateWithRetry = (retryCount = 0) => {
+          const tip1Element = document.getElementById('tip-1-joules-active');
+          const tip5Element = document.getElementById('tip-5-joules-active');
+          
+          if (!tip1Element || !tip5Element) {
+            console.log(`tip-data-update: Elements not ready, retry ${retryCount + 1}/5`);
+            if (retryCount < 5) {
+              setTimeout(() => updateWithRetry(retryCount + 1), 200);
+            }
+            return;
+          }
+          
+          console.log('tip-data-update: Elements ready, updating data');
+          updateTipData(tipData);  // Use the extracted tipData array
+        };
+        
+        updateWithRetry();
+      }
+    });
+
     // Load HomeScreen.html content
     fetch('HomeScreen.html?t=' + new Date().getTime())
       .then(response => response.text())
       .then(html => {
         document.getElementById('home-container').innerHTML = html;
+        
+        // Don't set default spinner state here - it will be set from cached data
         
         // Add click styling to navigation buttons and tip labels
         const style = document.createElement('style');
@@ -561,25 +710,13 @@
             toggleSwitch.className = 'toggle-switch-red';
             toggleText.textContent = 'Stop';
             
-            // Send start command to Python script
-            if (window.electronAPI) {
-              window.electronAPI.sendToPython({
-                type: 'toggle_state',
-                state: 'start'
-              });
-            }
+
           } else {
             // Switch to stopped state (blue)
             toggleSwitch.className = 'toggle-switch-blue';
             toggleText.textContent = 'Start';
             
-            // Send stop command to Python script
-            if (window.electronAPI) {
-              window.electronAPI.sendToPython({
-                type: 'toggle_state',
-                state: 'stop'
-              });
-            }
+
           }
         }
 
@@ -593,8 +730,8 @@
 
         // Listen for progress states updates from Python script
         window.addEventListener('update-progress-states', (event) => {
-          console.log('Received progress states update:', event.detail.states);
-          updateProgressStates(event.detail.states);
+          console.log('Received progress states update:', event.detail);
+          updateProgressStates(event.detail);
         });
 
         // Listen for progress text updates from Python script
@@ -786,16 +923,62 @@
           });
         }
         
-        // Request all current values from the Python script when page loads
-        // Use immediate execution if WebSocket is likely connected
-        requestAnimationFrame(() => {
-          if (window.electronAPI) {
-            window.electronAPI.sendToPython({
-              type: 'request_all_values'
-            });
-            console.log('Requested all values from Python script');
-          }
-        });
+        // Load saved tip data from JSON on startup
+        if (window.electronAPI && window.electronAPI.readTipStates) {
+          window.electronAPI.readTipStates().then(result => {
+            if (result && result.tipStates) {
+              console.log('Loading saved tip states:', result.tipStates);
+              const tips = [];
+              for (let i = 1; i <= 8; i++) {
+                const tipState = result.tipStates[i.toString()];
+                if (tipState) {
+                  tips.push({
+                    tip_number: i,
+                    joules: tipState.current_joules || 0,
+                    distance: tipState.current_distance || 0,
+                    heat_percentage: tipState.current_heat_percentage || 0
+                  });
+                }
+              }
+              if (tips.length > 0) {
+                updateTipData(tips);
+              }
+            }
+          }).catch(error => {
+            console.error('Error loading tip states:', error);
+          });
+        }
+
+        
+        // After content is loaded, immediately request tip data from main process
+        // This will trigger the read_tip_states handler which now also sends tip-data-update
+        console.log('HomeScreen content loaded, requesting tip data from main process');
+        
+        if (window.electronAPI && window.electronAPI.readTipStates) {
+          // The main process will send a tip-data-update event with the data
+          // This is more reliable than trying to parse the data here
+          window.electronAPI.readTipStates().then(result => {
+            console.log('readTipStates completed, data should have been sent via tip-data-update event');
+            
+                    // Also restore cycle progress if available
+        if (result && result.cycleProgress) {
+          console.log('Restoring cycle progress from readTipStates:', result.cycleProgress);
+          // Dispatch the event to HomeScreen
+          window.dispatchEvent(new CustomEvent('update-progress-states', { 
+            detail: result.cycleProgress 
+          }));
+        }
+        
+        // Also restore home screen data if available
+        if (result && result.homeScreen) {
+          console.log('Restoring home screen data from readTipStates:', result.homeScreen);
+          updateHomeScreenData(result.homeScreen);
+        }
+          }).catch(error => {
+            console.error('Error requesting tip states:', error);
+          });
+        }
+
       })
       .catch(error => {
         console.error('Error loading HomeScreen.html:', error);
@@ -809,11 +992,35 @@
       if (typeof window.dismissPasswordOverlay === 'function') {
         try { window.dismissPasswordOverlay(); } catch (e) {}
       }
-      if (window.electronAPI) {
-        window.electronAPI.sendToPython({
-          type: 'request_all_values'
+      
+      // Reload tip states when navigating back to home
+      // Simply request fresh data from main process
+      console.log('page-navigated-home event received, requesting fresh tip data');
+      
+      if (window.electronAPI && window.electronAPI.readTipStates) {
+        // The main process will send a tip-data-update event with the data
+        window.electronAPI.readTipStates().then(result => {
+          console.log('Navigation: readTipStates completed', result);
+          
+          // Also restore cycle progress if available
+          if (result && result.cycleProgress) {
+            console.log('Navigation: Restoring cycle progress:', result.cycleProgress);
+            // Dispatch the event to HomeScreen
+            window.dispatchEvent(new CustomEvent('update-progress-states', { 
+              detail: result.cycleProgress 
+            }));
+          }
+          
+          // Also restore home screen data if available
+          if (result && result.homeScreen) {
+            console.log('Navigation: Restoring home screen data:', result.homeScreen);
+            updateHomeScreenData(result.homeScreen);
+          }
+        }).catch(error => {
+          console.error('Error requesting tip states after navigation:', error);
         });
       }
+
     });
     
     // Listen for tip state changes from heating screen
@@ -832,9 +1039,89 @@
       }
     });
     
+    // Function to update home screen data
+    function updateHomeScreenData(data) {
+      console.log('Updating home screen data in index.html:', data);
+      
+      // Update banner text
+      if (data.banner_text !== undefined) {
+        const bannerElement = document.getElementById('home-banner-text');
+        if (bannerElement) {
+          bannerElement.textContent = data.banner_text;
+        }
+      }
+      
+      // Update processing text
+      if (data.processing_text !== undefined) {
+        const processingElement = document.getElementById('home-cycle-progress-text');
+        if (processingElement) {
+          processingElement.textContent = data.processing_text;
+        }
+      }
+      
+      // Update spinner state and visibility
+      if (data.spinner_active !== undefined) {
+        const spinnerElement = document.querySelector('.spinner');
+        if (spinnerElement) {
+          if (data.spinner_active) {
+            spinnerElement.classList.add('spinning');
+            spinnerElement.style.display = 'flex';
+          } else {
+            spinnerElement.classList.remove('spinning');
+            spinnerElement.style.display = 'none';
+          }
+        }
+      }
+      
+      // Update percentage
+      if (data.percentage !== undefined) {
+        const percentageElement = document.getElementById('home-text-percent');
+        if (percentageElement) {
+          percentageElement.textContent = `${Math.round(data.percentage)}%`;
+        }
+      }
+      
+      // Update time text
+      if (data.time_text !== undefined) {
+        const timeElement = document.getElementById('home-text-time');
+        if (timeElement) {
+          timeElement.textContent = data.time_text;
+        }
+      }
+      
+      // Update slider position
+      if (data.slider_position !== undefined) {
+        const sliderCircle = document.getElementById('home-slider-circle');
+        const slider = document.getElementById('home-slider');
+        if (sliderCircle && slider) {
+          // Use requestAnimationFrame to ensure dimensions are available
+          requestAnimationFrame(() => {
+            // Calculate position based on percentage (0-100)
+            const sliderWidth = slider.offsetWidth;
+            const circleWidth = sliderCircle.offsetWidth;
+            if (sliderWidth > 0) {
+              const maxPosition = sliderWidth - circleWidth;
+              const position = (data.slider_position / 100) * maxPosition;
+              sliderCircle.style.left = `${position}px`;
+              console.log(`Slider updated: ${data.slider_position}% = ${position}px of ${maxPosition}px max`);
+            }
+          });
+        }
+      }
+    }
+    
+    // Listen for home screen updates
+    window.addEventListener('home-screen-update', (event) => {
+      console.log('Index.html received home-screen-update event');
+      if (event.detail) {
+        updateHomeScreenData(event.detail);
+      }
+    });
+    
     // Handle batch updates for instant page updates
     window.addEventListener('batch-update', (event) => {
       const updates = event.detail;
+      console.log('Batch update received:', updates);
       
       // Use requestAnimationFrame to batch DOM updates
       requestAnimationFrame(() => {
@@ -848,6 +1135,15 @@
               }
             }
           });
+        }
+        
+        // Update tip data if present
+        if (updates.currentTipData && updates.currentTipData.length > 0) {
+          console.log('Updating tip data from batch:', updates.currentTipData);
+          // Add a small delay to ensure DOM is ready
+          setTimeout(() => {
+            updateTipData(updates.currentTipData);
+          }, 100);
         }
         
         // Update all progress bars at once
@@ -871,6 +1167,11 @@
         // Update progress states directly
         if (updates.progressStates) {
           updateProgressStates(updates.progressStates);
+          
+          // Also dispatch to HomeScreen if it's listening
+          window.dispatchEvent(new CustomEvent('update-progress-states', { 
+            detail: updates.progressStates 
+          }));
         }
         
         // Update tip states directly
@@ -887,8 +1188,46 @@
             }
           });
         }
+        
+        // Update home screen data if provided
+        if (updates.homeScreen) {
+          updateHomeScreenData(updates.homeScreen);
+        }
       });
     });
+  </script>
+  
+  <!-- Include serial configuration component -->
+  <div id="serial-config-container"></div>
+  <script>
+    // Load serial configuration component
+    fetch('./serial-config.html')
+      .then(response => response.text())
+      .then(html => {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        
+        // Extract styles
+        const styles = doc.querySelectorAll('style');
+        styles.forEach(style => {
+          document.head.appendChild(style.cloneNode(true));
+        });
+        
+        // Extract the component
+        const serialConfig = doc.querySelector('#serial-config');
+        if (serialConfig) {
+          document.getElementById('serial-config-container').appendChild(serialConfig);
+        }
+        
+        // Extract and execute scripts
+        const scripts = doc.querySelectorAll('script');
+        scripts.forEach(script => {
+          const newScript = document.createElement('script');
+          newScript.textContent = script.textContent;
+          document.body.appendChild(newScript);
+        });
+      })
+      .catch(error => console.error('Error loading serial config:', error));
   </script>
 </body>
 </html>

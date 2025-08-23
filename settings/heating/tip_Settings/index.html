@@ -237,7 +237,7 @@
       window.location.href = '../index.html';
     }
     
-    // Save current values to JSON and Modbus
+    // Save current values to JSON
     async function saveCurrentValues() {
       try {
         console.log(`Saving values for tip ${currentTip}: energy=${energyValue}, distance=${distanceValue}, heat_start_delay=${heatStartDelayValue}`);
@@ -269,24 +269,7 @@
         // Add a small delay to ensure file write is complete
         await new Promise(resolve => setTimeout(resolve, 100));
         
-        // Send to Python for Modbus writes
-        window.electronAPI.sendToPython({
-          type: 'update_heating_energy',
-          tipNumber: currentTip,
-          value: energyValue
-        });
-        
-        window.electronAPI.sendToPython({
-          type: 'update_heating_distance',
-          tipNumber: currentTip,
-          value: distanceValue
-        });
-        
-        window.electronAPI.sendToPython({
-          type: 'update_heating_heat_start_delay',
-          tipNumber: currentTip,
-          value: heatStartDelayValue
-        });
+
         
         console.log('All values saved successfully');
         

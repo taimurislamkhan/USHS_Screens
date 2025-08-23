@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   navigateToPage: (path) => {
     // For Electron, we'll handle navigation differently
     // This will be used by the renderer to communicate navigation intent
+    console.log('Preload: navigateToPage called with path:', path);
     ipcRenderer.send('navigate-to-page', path);
   },
   
@@ -28,8 +29,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getPlatform: () => process.platform,
   isDev: () => process.env.NODE_ENV === 'development',
   
-  // Send messages to Python script
-  sendToPython: (data) => ipcRenderer.send('send-to-python', data),
+
   
   // Get cached UI state
   getCachedState: () => ipcRenderer.invoke('get-cached-state'),
@@ -39,8 +39,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // Listen for messages
   onMessage: (callback) => {
-    const listener = (event, data) => callback(data);
-    ipcRenderer.on('modbus-update', listener);
+    // This can be extended for other message types as needed
+  },
+  
+  // Serial port methods
+  serial: {
+    listPorts: () => ipcRenderer.invoke('serial-list-ports'),
+    connect: (port, baudRate) => ipcRenderer.invoke('serial-connect', { port, baudRate }),
+    disconnect: () => ipcRenderer.invoke('serial-disconnect'),
+    send: (data) => ipcRenderer.invoke('serial-send', data),
+    getStatus: () => ipcRenderer.invoke('serial-get-status')
   }
 });
 
@@ -78,6 +86,15 @@ ipcRenderer.on('update-progress-states', (event, data) => {
 ipcRenderer.on('update-progress-text', (event, data) => {
   // Dispatch custom event for progress text updates
   window.dispatchEvent(new CustomEvent('update-progress-text', { detail: data }));
+});
+
+// Handle tip data update events from main process
+ipcRenderer.on('tip-data-update', (event, data) => {
+  console.log('Preload received tip-data-update IPC event:', data);
+  // Dispatch custom event for tip data updates
+  const customEvent = new CustomEvent('tip-data-update', { detail: data });
+  console.log('Dispatching custom event to window');
+  window.dispatchEvent(customEvent);
 });
 
 // Handle tip state update events from main process
@@ -120,14 +137,21 @@ ipcRenderer.on('batch-update', (event, data) => {
   window.dispatchEvent(new CustomEvent('batch-update', { detail: data }));
 });
 
-// Handle modbus data updates
-ipcRenderer.on('modbus-update', (event, data) => {
-  window.dispatchEvent(new CustomEvent('modbus-update', { detail: data }));
+// Handle home screen updates
+ipcRenderer.on('home-screen-update', (event, data) => {
+  console.log('Preload received home-screen-update IPC event:', data);
+  window.dispatchEvent(new CustomEvent('home-screen-update', { detail: data }));
 });
 
 // Handle tip state changed notifications
 ipcRenderer.on('tip-state-changed', (event, data) => {
   window.dispatchEvent(new CustomEvent('tip-state-changed', { detail: data }));
+});
+
+// Handle work position updates from controller
+ipcRenderer.on('work-position-update', (event, data) => {
+  console.log('Preload received work-position-update IPC event:', data);
+  window.dispatchEvent(new CustomEvent('work-position-update', { detail: data }));
 });
 
 // Handle heating update events
@@ -143,4 +167,17 @@ ipcRenderer.on('monitor-update', (event, data) => {
 // Handle manual controls updates
 ipcRenderer.on('manual-controls-update', (event, data) => {
   window.dispatchEvent(new CustomEvent('manual-controls-update', { detail: data }));
+});
+
+// Handle serial port events
+ipcRenderer.on('serial-connected', (event, port) => {
+  window.dispatchEvent(new CustomEvent('serial-connected', { detail: port }));
+});
+
+ipcRenderer.on('serial-disconnected', () => {
+  window.dispatchEvent(new CustomEvent('serial-disconnected'));
+});
+
+ipcRenderer.on('serial-error', (event, error) => {
+  window.dispatchEvent(new CustomEvent('serial-error', { detail: error }));
 });

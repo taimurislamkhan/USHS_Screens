@@ -313,8 +313,6 @@
     async function saveConfigKey(key) {
       try {
         await window.electronAPI.sendMessage('update_configuration', { key, value: configState[key] });
-        // Send to Python for Modbus write
-        window.electronAPI.sendToPython({ type: 'update_configuration', key, value: configState[key] });
       } catch (e) {
         console.error('Error saving configuration:', e);
       }

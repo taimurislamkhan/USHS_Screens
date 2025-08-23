@@ -1,49 +1,38 @@
 #!/bin/bash
 
-# Setup virtual serial ports for Modbus testing
-# This creates a pair of connected virtual serial ports
+# Setup virtual serial ports for testing
+# This creates a pair of virtual serial ports connected to each other
 
-echo "Setting up virtual serial ports for Modbus communication..."
+echo "Setting up virtual serial ports..."
 
 # Check if socat is installed
 if ! command -v socat &> /dev/null; then
-    echo "Error: socat is not installed. Please install it with:"
-    echo "  sudo apt-get install socat"
-    exit 1
+    echo "socat is not installed. Installing..."
+    sudo apt-get update
+    sudo apt-get install -y socat
 fi
 
-# Kill any existing socat processes using these ports
-pkill -f "pty,raw,echo=0,link=/tmp/vserial1"
-pkill -f "pty,raw,echo=0,link=/tmp/vserial2"
-
-# Wait a moment for processes to terminate
-sleep 1
+# Kill any existing socat processes
+pkill socat 2>/dev/null
 
 # Create virtual serial port pair
+# /tmp/ttyV0 - For the Electron app
+# /tmp/ttyV1 - For the Python simulator
 echo "Creating virtual serial port pair..."
-socat -d -d pty,raw,echo=0,link=/tmp/vserial1 pty,raw,echo=0,link=/tmp/vserial2 &
+socat -d -d pty,raw,echo=0,link=/tmp/ttyV0 pty,raw,echo=0,link=/tmp/ttyV1 &
 
 # Save the PID
-SOCAT_PID=$!
-echo $SOCAT_PID > /tmp/vserial_socat.pid
+echo $! > /tmp/virtual_serial.pid
 
-# Wait for ports to be created
-sleep 2
+# Give it a moment to create the ports
+sleep 1
 
 # Set permissions
-chmod 666 /tmp/vserial1 2>/dev/null
-chmod 666 /tmp/vserial2 2>/dev/null
+sudo chmod 666 /tmp/ttyV0 2>/dev/null || true
+sudo chmod 666 /tmp/ttyV1 2>/dev/null || true
 
-# Check if ports were created
-if [ -e /tmp/vserial1 ] && [ -e /tmp/vserial2 ]; then
-    echo "Virtual serial ports created successfully:"
-    echo "  Slave port:  /tmp/vserial1"
-    echo "  Master port: /tmp/vserial2"
-    echo ""
-    echo "To stop the virtual ports, run:"
-    echo "  kill $SOCAT_PID"
-    echo "  or: pkill -f 'pty,raw,echo=0,link=/tmp/vserial'"
-else
-    echo "Error: Failed to create virtual serial ports"
-    exit 1
-fi
+echo "Virtual serial ports created:"
+echo "  /tmp/ttyV0 - Connect Electron app here"
+echo "  /tmp/ttyV1 - Connect Python simulator here"
+echo ""
+echo "To stop the virtual ports, run: pkill socat"

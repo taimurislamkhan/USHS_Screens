@@ -4,8 +4,8 @@
   "description": "USHS Screens Electron Application",
   "main": "main.js",
   "scripts": {
-    "start": "electron . --no-sandbox",
-    "dev": "electron . --dev --no-sandbox",
+    "start": "electron . --no-sandbox --disable-gpu",
+    "dev": "electron . --dev --no-sandbox --disable-gpu",
     "build": "electron-builder",
     "dist": "electron-builder --publish=never"
   },
@@ -24,7 +24,8 @@
     "electron-builder": "^24.6.4"
   },
   "dependencies": {
-    "ws": "^8.14.2"
+    "ws": "^8.14.2",
+    "serialport": "^12.0.0"
   },
   "build": {
     "appId": "com.ushs.screens",

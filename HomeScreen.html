@@ -1,4 +1,512 @@
   <div class="home-screen">
+  
+  <script>
+    // Note: This script won't execute when loaded via innerHTML
+    // All functionality has been moved to index.html
+    
+    // Function to update progress states
+    function updateProgressStates(states) {
+      console.log('Updating progress states in HomeScreen:', states);
+      const progressItems = ["home", "work_position", "encoder_zero", "heat", "cool", "cycle_complete"];
+      
+      progressItems.forEach((item, index) => {
+        const state = states[item] || 'inactive';
+        
+        // Get selectors for each element
+        const ellipseSelector = index < 3 ? 
+          '.progress-bar-vertical-check-' + (index + 1) + ' .ellipse-1' :
+          '.progress-bar-vertical-un-check-' + (index - 2) + ' .ellipse-1';
+        
+        const labelSelector = index < 3 ?
+          (index === 0 ? '.label-successfull' : '.label-successfull' + (index + 1)) :
+          '.label-successfull-unchecked-' + (index - 2);
+        
+        const textSelector = index < 3 ?
+          '.text-suisse-24-active' + (index === 0 ? '' : (index + 1)) :
+          '.text-suisse-24-in-active' + (index === 3 ? '' : (index - 3 + 1));
+        
+        const ellipse = document.querySelector(ellipseSelector);
+        const label = document.querySelector(labelSelector);
+        const textElement = document.querySelector(textSelector);
+        
+        if (ellipse && label && textElement) {
+          // Apply state directly with inline styles for reliability
+          if (state === 'inactive') {
+            ellipse.style.opacity = '0';
+            label.style.opacity = '0';
+            textElement.style.color = '#7f8891';
+          } else if (state === 'active') {
+            ellipse.style.opacity = '1';
+            label.style.opacity = '0';
+            textElement.style.color = '#f5f6f6';
+          } else if (state === 'done') {
+            ellipse.style.opacity = '1';
+            label.style.opacity = '1';
+            textElement.style.color = '#f5f6f6';
+          }
+        }
+      });
+      
+      // Update progress text based on active state
+      const progressText = document.getElementById('home-cycle-progress-text');
+      if (progressText) {
+        const activeItem = Object.entries(states).find(([key, value]) => value === 'active');
+        if (activeItem) {
+          const stageName = activeItem[0].replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+          progressText.textContent = `Processing ${stageName}...`;
+        } else if (Object.values(states).every(state => state === 'done')) {
+          progressText.textContent = 'Cycle Complete!';
+        } else if (Object.values(states).every(state => state === 'inactive')) {
+          progressText.textContent = 'Ready to Start';
+        }
+      }
+    }
+    
+    // Function to update tip data for a single tip
+    function updateTipDataForSingleTip(tipNumber) {
+      if (window.electronAPI && window.electronAPI.sendMessage) {
+        window.electronAPI.sendMessage('read_tip_states').then(response => {
+          if (response && response.tipStates) {
+            const tipState = response.tipStates[tipNumber.toString()];
+            if (tipState) {
+              const tipData = {
+                tip_number: tipNumber,
+                joules: tipState.current_joules || 0,
+                distance: tipState.current_distance || 0,
+                heat_percentage: tipState.current_heat_percentage || 0
+              };
+              updateSingleTip(tipData);
+            }
+          }
+        }).catch(error => {
+          console.error('Error loading tip state for single tip update:', error);
+        });
+      }
+    }
+    
+    // Function to update a single tip's display
+    function updateSingleTip(tip) {
+      console.log(`Updating single tip ${tip.tip_number}: ${tip.joules}J, ${tip.distance}mm, ${tip.heat_percentage}%`);
+      const tipNum = tip.tip_number;
+      
+      // Try to find elements in both active and inactive states
+      let joulesEl = document.getElementById(`tip-${tipNum}-joules-active`);
+      if (!joulesEl) {
+        joulesEl = document.getElementById(`tip-${tipNum}-joules-in-active`);
+      }
+      if (joulesEl) {
+        joulesEl.textContent = `${tip.joules.toFixed(1)} J`;
+      }
+      
+      let distanceEl = document.getElementById(`tip-${tipNum}-distance-active`);
+      if (!distanceEl) {
+        distanceEl = document.getElementById(`tip-${tipNum}-distance-in-active`);
+      }
+      if (distanceEl) {
+        distanceEl.textContent = `${tip.distance.toFixed(1)} mm`;
+      }
+      
+      // Update heat percentage progress bars
+      const fillCount = Math.round(tip.heat_percentage / 10);
+      console.log(`Tip ${tipNum}: Updating heat percentage to ${tip.heat_percentage}% (${fillCount} bars)`);
+      
+      let progressEl = document.getElementById(`tip-${tipNum}-progress-active`);
+      if (!progressEl) {
+        progressEl = document.getElementById(`tip-${tipNum}-progress-in-active`);
+      }
+      
+      if (progressEl) {
+        const isActive = progressEl.classList.contains('progress-bar-active');
+        const fillClass = isActive ? 'progress-bar-active-fill' : 'progress-bar-in-active-fill';
+        console.log(`Tip ${tipNum}: Found progress element, isActive: ${isActive}, fillClass: ${fillClass}`);
+        
+        let fillsFound = 0;
+        for (let i = 1; i <= 10; i++) {
+          const fillEl = progressEl.querySelector(`.${fillClass}-${i}`);
+          if (fillEl) {
+            fillsFound++;
+            fillEl.style.opacity = i <= fillCount ? '1' : '0.3';
+          }
+        }
+        console.log(`Tip ${tipNum}: Updated ${fillsFound} fill elements`);
+      } else {
+        console.warn(`Tip ${tipNum}: Could not find progress element`);
+      }
+    }
+
+    // Function to update tip data displays
+    function updateTipData(tips) {
+      console.log('Updating tip data in HomeScreen:', tips);
+      console.log('updateTipData called with', tips.length, 'tips');
+      
+      tips.forEach(tip => {
+        updateSingleTip(tip);
+      });
+    }
+    
+    // Listen for progress states updates
+    window.addEventListener('update-progress-states', (event) => {
+      console.log('HomeScreen received progress states update:', event.detail);
+      updateProgressStates(event.detail);
+    });
+    
+    // Listen for tip data updates
+    window.addEventListener('tip-data-update', (event) => {
+      console.log('HomeScreen received tip data update event');
+      console.log('Event detail:', event.detail);
+      console.log('Event detail type:', typeof event.detail);
+      
+      if (event.detail) {
+        // Handle tips array
+        if (event.detail.tips) {
+          console.log('Updating tips from tip-data-update event');
+          updateTipData(event.detail.tips);
+        }
+        
+        // Handle cycle progress
+        if (event.detail.cycleProgress) {
+          console.log('Updating cycle progress from tip-data-update event');
+          updateProgressStates(event.detail.cycleProgress);
+        }
+        
+        // Handle home screen data
+        if (event.detail.homeScreen) {
+          console.log('Updating home screen data from tip-data-update event');
+          updateHomeScreenData(event.detail.homeScreen);
+        }
+      } else {
+        console.error('No detail in tip data update event!');
+      }
+    });
+    
+    // Also listen for batch updates
+    window.addEventListener('batch-update', (event) => {
+      console.log('HomeScreen: Received batch-update event:', event.detail);
+      if (event.detail && event.detail.progressStates) {
+        console.log('HomeScreen received batch update with progress states:', event.detail.progressStates);
+        updateProgressStates(event.detail.progressStates);
+      } else {
+        console.log('HomeScreen: No progressStates in batch update');
+      }
+      
+      // Handle home screen data in batch update
+      if (event.detail && event.detail.homeScreen) {
+        console.log('HomeScreen received batch update with home screen data:', event.detail.homeScreen);
+        updateHomeScreenData(event.detail.homeScreen);
+      }
+    });
+    
+    // Listen for home screen updates
+    window.addEventListener('home-screen-update', (event) => {
+      console.log('HomeScreen received home-screen-update event:', event.detail);
+      if (event.detail) {
+        updateHomeScreenData(event.detail);
+      }
+    });
+    
+    // Listen for tip state changes from other screens
+    window.addEventListener('tip-state-changed', (event) => {
+      if (event.detail) {
+        console.log('HomeScreen received tip state change:', event.detail);
+        setTipVisualState(event.detail.tipNumber, event.detail.active);
+        
+        // Update the tip data after state change with a slight delay
+        setTimeout(() => {
+          updateTipDataForSingleTip(event.detail.tipNumber);
+        }, 200);
+      }
+    });
+    
+    // Request current state when page loads
+    window.addEventListener('page-navigated-home', () => {
+      console.log('HomeScreen: Requesting current state');
+      
+      // Re-initialize tip states when navigating back to home
+      initializeTipStates();
+    });
+    
+    // Function to initialize tip active/inactive states based on JSON
+    function initializeTipStates() {
+      if (window.electronAPI && window.electronAPI.sendMessage) {
+        window.electronAPI.sendMessage('read_tip_states')
+          .then(response => {
+            if (response && response.tipStates) {
+              console.log('Initializing tip states from JSON:', response.tipStates);
+              
+              // Prepare tip data array
+              const tips = [];
+              Object.entries(response.tipStates).forEach(([tipNumber, tipData]) => {
+                const tipNum = parseInt(tipNumber);
+                if (tipNum >= 1 && tipNum <= 8) {
+                  tips.push({
+                    tip_number: tipNum,
+                    joules: tipData.current_joules || 0,
+                    distance: tipData.current_distance || 0,
+                    heat_percentage: tipData.current_heat_percentage || 0
+                  });
+                  
+                  // Only update visual state if it's different from current state
+                  // Since all tips are now hardcoded as active in HTML, we only need to handle inactive tips
+                  if (!tipData.active) {
+                    setTipVisualState(tipNum, false);
+                  }
+                }
+              });
+              
+              // Update tip data immediately since all active tips are already in the correct state
+              if (tips.length > 0) {
+                console.log('Updating tip data on initialization');
+                updateTipData(tips);
+              }
+              
+              // Also update cycle progress if available
+              if (response.cycleProgress) {
+                console.log('Initializing cycle progress from JSON:', response.cycleProgress);
+                updateProgressStates(response.cycleProgress);
+              }
+            }
+          })
+          .catch(error => {
+            console.error('Error loading tip states:', error);
+          });
+      }
+    }
+    
+    // Function to set tip visual state (active/inactive)  
+    function setTipVisualState(tipNumber, isActive) {
+      console.log(`Setting tip ${tipNumber} to ${isActive ? 'active' : 'inactive'}`);
+      
+      // Find the tip container - all tips can now switch states
+      let tipContainer = document.querySelector(`#tip-${tipNumber}-joules-active`)?.closest('.tip-display-active');
+      
+      // If not found in active state, try inactive state
+      if (!tipContainer) {
+        tipContainer = document.querySelector(`#tip-${tipNumber}-joules-in-active`)?.closest('.tip-display-in-active');
+      }
+      
+      if (!tipContainer) {
+        console.error(`Could not find tip container for tip ${tipNumber}`);
+        return;
+      }
+      
+      const currentlyActive = tipContainer.classList.contains('tip-display-active');
+      
+      if (isActive && !currentlyActive) {
+        // Switch from inactive to active
+        tipContainer.classList.remove('tip-display-in-active');
+        tipContainer.classList.add('tip-display-active');
+        
+        // Update status label
+        const statusLabel = tipContainer.querySelector('.text-suisse-243');
+        if (statusLabel) {
+          statusLabel.textContent = 'Active';
+        }
+        
+        // Update status indicator circle
+        const ellipse = tipContainer.querySelector('.ellipse2');
+        if (ellipse) {
+          ellipse.classList.remove('ellipse2');
+          ellipse.classList.add('ellipse');
+        }
+        
+        // Update joules element ID and class for updateTipData to find
+        const joulesEl = tipContainer.querySelector(`#tip-${tipNumber}-joules-in-active`);
+        if (joulesEl) {
+          joulesEl.id = `tip-${tipNumber}-joules-active`;
+          joulesEl.classList.remove('_0-j');
+          joulesEl.classList.add('text-suisse-322');
+        }
+        
+        // Update distance element ID
+        const distanceEl = tipContainer.querySelector(`#tip-${tipNumber}-distance-in-active`);
+        if (distanceEl) {
+          distanceEl.id = `tip-${tipNumber}-distance-active`;
+          distanceEl.classList.remove('home-tip-distance-in-active');
+          distanceEl.classList.add('home-tip-distance-active');
+        }
+        
+        // Update progress bar ID and styling
+        const progressEl = tipContainer.querySelector(`#tip-${tipNumber}-progress-in-active`);
+        if (progressEl) {
+          progressEl.id = `tip-${tipNumber}-progress-active`;
+          progressEl.classList.remove('progress-bar-in-active');
+          progressEl.classList.add('progress-bar-active');
+          
+          // Update progress bar fill classes
+          const fills = progressEl.querySelectorAll('[class*="progress-bar-in-active-fill"]');
+          fills.forEach((fill, index) => {
+            const currentClass = fill.className;
+            const newClass = currentClass.replace('progress-bar-in-active-fill', 'progress-bar-active-fill');
+            fill.className = newClass;
+            
+            // Reset opacity to ensure proper styling
+            fill.style.opacity = '0.3';
+          });
+          
+        }
+        
+        console.log(`Tip ${tipNumber} switched to active state with proper element IDs`);
+        
+      } else if (!isActive && currentlyActive) {
+        // Switch from active to inactive
+        tipContainer.classList.remove('tip-display-active');
+        tipContainer.classList.add('tip-display-in-active');
+        
+        // Update status label
+        const statusLabel = tipContainer.querySelector('.text-suisse-243');
+        if (statusLabel) {
+          statusLabel.textContent = 'Inactive';
+        }
+        
+        // Update status indicator circle
+        const ellipse = tipContainer.querySelector('.ellipse');
+        if (ellipse) {
+          ellipse.classList.remove('ellipse');
+          ellipse.classList.add('ellipse2');
+        }
+        
+        // Update joules element ID and class
+        const joulesEl = tipContainer.querySelector(`#tip-${tipNumber}-joules-active`);
+        if (joulesEl) {
+          joulesEl.id = `tip-${tipNumber}-joules-in-active`;
+          joulesEl.classList.remove('text-suisse-322');
+          joulesEl.classList.add('_0-j');
+        }
+        
+        // Update distance element ID
+        const distanceEl = tipContainer.querySelector(`#tip-${tipNumber}-distance-active`);
+        if (distanceEl) {
+          distanceEl.id = `tip-${tipNumber}-distance-in-active`;
+          distanceEl.classList.remove('home-tip-distance-active');
+          distanceEl.classList.add('home-tip-distance-in-active');
+        }
+        
+        // Update progress bar ID
+        const progressEl = tipContainer.querySelector(`#tip-${tipNumber}-progress-active`);
+        if (progressEl) {
+          progressEl.id = `tip-${tipNumber}-progress-in-active`;
+          progressEl.classList.remove('progress-bar-active');
+          progressEl.classList.add('progress-bar-in-active');
+          
+          // Update progress bar fill classes
+          const fills = progressEl.querySelectorAll('[class*="progress-bar-active-fill"]');
+          fills.forEach(fill => {
+            const currentClass = fill.className;
+            const newClass = currentClass.replace('progress-bar-active-fill', 'progress-bar-in-active-fill');
+            fill.className = newClass;
+          });
+        }
+        
+        console.log(`Tip ${tipNumber} switched to inactive state`);
+      }
+    }
+    
+    // Function to update home screen data
+    function updateHomeScreenData(data) {
+      console.log('Updating home screen data:', data);
+      
+      // Update banner text
+      if (data.banner_text !== undefined) {
+        const bannerElement = document.getElementById('home-banner-text');
+        if (bannerElement) {
+          bannerElement.textContent = data.banner_text;
+        }
+      }
+      
+      // Update processing text
+      if (data.processing_text !== undefined) {
+        const processingElement = document.getElementById('home-cycle-progress-text');
+        if (processingElement) {
+          processingElement.textContent = data.processing_text;
+        }
+      }
+      
+      // Update spinner state
+      if (data.spinner_active !== undefined) {
+        const spinnerElement = document.querySelector('.spinner');
+        if (spinnerElement) {
+          if (data.spinner_active) {
+            spinnerElement.classList.add('spinning');
+          } else {
+            spinnerElement.classList.remove('spinning');
+          }
+        }
+      }
+      
+      // Update percentage
+      if (data.percentage !== undefined) {
+        const percentageElement = document.getElementById('home-text-percent');
+        if (percentageElement) {
+          percentageElement.textContent = `${Math.round(data.percentage)}%`;
+        }
+      }
+      
+      // Update time text
+      if (data.time_text !== undefined) {
+        const timeElement = document.getElementById('home-text-time');
+        if (timeElement) {
+          timeElement.textContent = data.time_text;
+        }
+      }
+      
+      // Update slider position
+      if (data.slider_position !== undefined) {
+        const sliderCircle = document.getElementById('home-slider-circle');
+        const slider = document.getElementById('home-slider');
+        if (sliderCircle && slider) {
+          // Use requestAnimationFrame to ensure dimensions are available
+          requestAnimationFrame(() => {
+            // Calculate position based on percentage (0-100)
+            const sliderWidth = slider.offsetWidth;
+            const circleWidth = sliderCircle.offsetWidth;
+            if (sliderWidth > 0) {
+              const maxPosition = sliderWidth - circleWidth;
+              const position = (data.slider_position / 100) * maxPosition;
+              sliderCircle.style.left = `${position}px`;
+              console.log(`Slider updated: ${data.slider_position}% = ${position}px of ${maxPosition}px max`);
+            }
+          });
+        }
+      }
+    }
+    
+    // Check for cached state on load
+    document.addEventListener('DOMContentLoaded', async () => {
+      if (window.electronAPI && window.electronAPI.getCachedState) {
+        try {
+          const cachedState = await window.electronAPI.getCachedState();
+          if (cachedState) {
+            if (cachedState.progressStates) {
+              console.log('Loading cached progress states:', cachedState.progressStates);
+              updateProgressStates(cachedState.progressStates);
+            }
+            if (cachedState.homeScreenData) {
+              console.log('Loading cached home screen data:', cachedState.homeScreenData);
+              updateHomeScreenData(cachedState.homeScreenData);
+            }
+          }
+        } catch (error) {
+          console.error('Error loading cached state:', error);
+        }
+      }
+      
+      // Initialize tip states and data
+      initializeTipStates();
+      
+      // Set default spinner state
+      const spinner = document.querySelector('.spinner');
+      if (spinner) {
+        spinner.classList.add('spinning');
+      }
+    });
+    
+    // Navigation function
+    function navigateToPage(path) {
+      if (window.electronAPI && window.electronAPI.navigateToPage) {
+        window.electronAPI.navigateToPage(path);
+      }
+    }
+  </script>
   <div class="navigation-bar-vertical">
     <div class="button-home-active" onclick="navigateToPage('index.html')">
       <div class="icon">
@@ -236,123 +744,123 @@
       </div>
       <div class="frame9">
         <!-- Tip 5 -->
-        <div class="tip-display-in-active">
+        <div class="tip-display-active">
           <div class="frame10">
             <div class="frame11">
-              <div class="home-tip-joules-in-active">
-                <div class="_0-j" id="tip-5-joules-in-active">0 J</div>
+              <div class="home-tip-joules-active">
+                <div class="text-suisse-322" id="tip-5-joules-active">0 J</div>
               </div>
-              <div class="home-tip-distance-in-active" id="tip-5-distance-in-active">0 mm</div>
+              <div class="home-tip-distance-active" id="tip-5-distance-active">0 mm</div>
             </div>
-            <div class="progress-bar-in-active" id="tip-5-progress-in-active">
-              <div class="progress-bar-in-active-fill-1"></div>
-              <div class="progress-bar-in-active-fill-2"></div>
-              <div class="progress-bar-in-active-fill-3"></div>
-              <div class="progress-bar-in-active-fill-4"></div>
-              <div class="progress-bar-in-active-fill-5"></div>
-              <div class="progress-bar-in-active-fill-6"></div>
-              <div class="progress-bar-in-active-fill-7"></div>
-              <div class="progress-bar-in-active-fill-8"></div>
-              <div class="progress-bar-in-active-fill-9"></div>
-              <div class="progress-bar-in-active-fill-10"></div>
+            <div class="progress-bar-active" id="tip-5-progress-active">
+              <div class="progress-bar-active-fill-1"></div>
+              <div class="progress-bar-active-fill-2"></div>
+              <div class="progress-bar-active-fill-3"></div>
+              <div class="progress-bar-active-fill-4"></div>
+              <div class="progress-bar-active-fill-5"></div>
+              <div class="progress-bar-active-fill-6"></div>
+              <div class="progress-bar-active-fill-7"></div>
+              <div class="progress-bar-active-fill-8"></div>
+              <div class="progress-bar-active-fill-9"></div>
+              <div class="progress-bar-active-fill-10"></div>
             </div>
           </div>
-          <div class="label-in-active">
-            <div class="text-suisse-244">5</div>
+          <div class="label-active">
+            <div class="text-suisse-242">5</div>
           </div>
-          <div class="label-tip-in-active">
-            <div class="ellipse2"></div>
-            <div class="text-suisse-243">Inactive</div>
+          <div class="label-tip-active">
+            <div class="ellipse"></div>
+            <div class="text-suisse-243">Active</div>
           </div>
         </div>
         <!-- Tip 6 -->
-        <div class="tip-display-in-active">
+        <div class="tip-display-active">
           <div class="frame10">
             <div class="frame11">
-              <div class="home-tip-joules-in-active">
-                <div class="_0-j" id="tip-6-joules-in-active">0 J</div>
+              <div class="home-tip-joules-active">
+                <div class="text-suisse-322" id="tip-6-joules-active">0 J</div>
               </div>
-              <div class="home-tip-distance-in-active" id="tip-6-distance-in-active">0 mm</div>
+              <div class="home-tip-distance-active" id="tip-6-distance-active">0 mm</div>
             </div>
-            <div class="progress-bar-in-active" id="tip-6-progress-in-active">
-              <div class="progress-bar-in-active-fill-1"></div>
-              <div class="progress-bar-in-active-fill-2"></div>
-              <div class="progress-bar-in-active-fill-3"></div>
-              <div class="progress-bar-in-active-fill-4"></div>
-              <div class="progress-bar-in-active-fill-5"></div>
-              <div class="progress-bar-in-active-fill-6"></div>
-              <div class="progress-bar-in-active-fill-7"></div>
-              <div class="progress-bar-in-active-fill-8"></div>
-              <div class="progress-bar-in-active-fill-9"></div>
-              <div class="progress-bar-in-active-fill-10"></div>
+            <div class="progress-bar-active" id="tip-6-progress-active">
+              <div class="progress-bar-active-fill-1"></div>
+              <div class="progress-bar-active-fill-2"></div>
+              <div class="progress-bar-active-fill-3"></div>
+              <div class="progress-bar-active-fill-4"></div>
+              <div class="progress-bar-active-fill-5"></div>
+              <div class="progress-bar-active-fill-6"></div>
+              <div class="progress-bar-active-fill-7"></div>
+              <div class="progress-bar-active-fill-8"></div>
+              <div class="progress-bar-active-fill-9"></div>
+              <div class="progress-bar-active-fill-10"></div>
             </div>
           </div>
-          <div class="label-in-active">
-            <div class="text-suisse-244">6</div>
+          <div class="label-active">
+            <div class="text-suisse-242">6</div>
           </div>
-          <div class="label-tip-in-active">
-            <div class="ellipse2"></div>
-            <div class="text-suisse-243">Inactive</div>
+          <div class="label-tip-active">
+            <div class="ellipse"></div>
+            <div class="text-suisse-243">Active</div>
           </div>
         </div>
         <!-- Tip 7 -->
-        <div class="tip-display-in-active">
+        <div class="tip-display-active">
           <div class="frame10">
             <div class="frame11">
-              <div class="home-tip-joules-in-active">
-                <div class="_0-j" id="tip-7-joules-in-active">0 J</div>
+              <div class="home-tip-joules-active">
+                <div class="text-suisse-322" id="tip-7-joules-active">0 J</div>
               </div>
-              <div class="home-tip-distance-in-active" id="tip-7-distance-in-active">0 mm</div>
+              <div class="home-tip-distance-active" id="tip-7-distance-active">0 mm</div>
             </div>
-            <div class="progress-bar-in-active" id="tip-7-progress-in-active">
-              <div class="progress-bar-in-active-fill-1"></div>
-              <div class="progress-bar-in-active-fill-2"></div>
-              <div class="progress-bar-in-active-fill-3"></div>
-              <div class="progress-bar-in-active-fill-4"></div>
-              <div class="progress-bar-in-active-fill-5"></div>
-              <div class="progress-bar-in-active-fill-6"></div>
-              <div class="progress-bar-in-active-fill-7"></div>
-              <div class="progress-bar-in-active-fill-8"></div>
-              <div class="progress-bar-in-active-fill-9"></div>
-              <div class="progress-bar-in-active-fill-10"></div>
+            <div class="progress-bar-active" id="tip-7-progress-active">
+              <div class="progress-bar-active-fill-1"></div>
+              <div class="progress-bar-active-fill-2"></div>
+              <div class="progress-bar-active-fill-3"></div>
+              <div class="progress-bar-active-fill-4"></div>
+              <div class="progress-bar-active-fill-5"></div>
+              <div class="progress-bar-active-fill-6"></div>
+              <div class="progress-bar-active-fill-7"></div>
+              <div class="progress-bar-active-fill-8"></div>
+              <div class="progress-bar-active-fill-9"></div>
+              <div class="progress-bar-active-fill-10"></div>
             </div>
           </div>
-          <div class="label-in-active">
-            <div class="text-suisse-244">7</div>
+          <div class="label-active">
+            <div class="text-suisse-242">7</div>
           </div>
-          <div class="label-tip-in-active">
-            <div class="ellipse2"></div>
-            <div class="text-suisse-243">Inactive</div>
+          <div class="label-tip-active">
+            <div class="ellipse"></div>
+            <div class="text-suisse-243">Active</div>
           </div>
         </div>
         <!-- Tip 8 -->
-        <div class="tip-display-in-active">
+        <div class="tip-display-active">
           <div class="frame10">
             <div class="frame11">
-              <div class="home-tip-joules-in-active">
-                <div class="_0-j" id="tip-8-joules-in-active">0 J</div>
+              <div class="home-tip-joules-active">
+                <div class="text-suisse-322" id="tip-8-joules-active">0 J</div>
               </div>
-              <div class="home-tip-distance-in-active" id="tip-8-distance-in-active">0 mm</div>
+              <div class="home-tip-distance-active" id="tip-8-distance-active">0 mm</div>
             </div>
-            <div class="progress-bar-in-active" id="tip-8-progress-in-active">
-              <div class="progress-bar-in-active-fill-1"></div>
-              <div class="progress-bar-in-active-fill-2"></div>
-              <div class="progress-bar-in-active-fill-3"></div>
-              <div class="progress-bar-in-active-fill-4"></div>
-              <div class="progress-bar-in-active-fill-5"></div>
-              <div class="progress-bar-in-active-fill-6"></div>
-              <div class="progress-bar-in-active-fill-7"></div>
-              <div class="progress-bar-in-active-fill-8"></div>
-              <div class="progress-bar-in-active-fill-9"></div>
-              <div class="progress-bar-in-active-fill-10"></div>
+            <div class="progress-bar-active" id="tip-8-progress-active">
+              <div class="progress-bar-active-fill-1"></div>
+              <div class="progress-bar-active-fill-2"></div>
+              <div class="progress-bar-active-fill-3"></div>
+              <div class="progress-bar-active-fill-4"></div>
+              <div class="progress-bar-active-fill-5"></div>
+              <div class="progress-bar-active-fill-6"></div>
+              <div class="progress-bar-active-fill-7"></div>
+              <div class="progress-bar-active-fill-8"></div>
+              <div class="progress-bar-active-fill-9"></div>
+              <div class="progress-bar-active-fill-10"></div>
             </div>
           </div>
-          <div class="label-in-active">
-            <div class="text-suisse-244">8</div>
+          <div class="label-active">
+            <div class="text-suisse-242">8</div>
           </div>
-          <div class="label-tip-in-active">
-            <div class="ellipse2"></div>
-            <div class="text-suisse-243">Inactive</div>
+          <div class="label-tip-active">
+            <div class="ellipse"></div>
+            <div class="text-suisse-243">Active</div>
           </div>
         </div>
       </div>

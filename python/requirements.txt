@@ -1,0 +1,3 @@
+# Requirements for USHS Controller Simulator
+pyserial>=3.5
+socat  # For virtual serial ports (install via system package manager)

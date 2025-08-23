@@ -33,7 +33,12 @@ const buttonStates = {
     watchdogTimers: {
         up: null,
         down: null
-    }
+    },
+    continuousSendIntervals: {
+        up: null,
+        down: null
+    },
+    speedMode: 'rapid' // Default to rapid speed
 };
 
 // Initialize when DOM is loaded
@@ -52,16 +57,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Request initial state
     requestInitialState();
     
-    // Set up periodic state sync to prevent stuck states
-    setInterval(function() {
-        // Only request state if we're not actively pressing buttons
-        const upPressed = elements.upButton && elements.upButton.classList.contains('pressed');
-        const downPressed = elements.downButton && elements.downButton.classList.contains('pressed');
-        
-        if (!upPressed && !downPressed) {
-            requestInitialState();
-        }
-    }, 2000); // Sync every 2 seconds
+    // Remove periodic state sync as it was causing issues with user interactions
+    // The state will be loaded once on page load and updated via serial events
     
     // Global event to catch any missed button releases
     window.addEventListener('mouseup', function(e) {
@@ -88,24 +85,55 @@ document.addEventListener('DOMContentLoaded', function() {
 function requestInitialState() {
     console.log('Requesting initial work position state');
     
-    // Load tip states from JSON file
+    // Load tip states and work position data from JSON file
     if (window.electronAPI) {
         window.electronAPI.sendMessage('read_tip_states').then(response => {
             if (response && response.tipStates) {
                 // Apply initial tip states
                 Object.entries(response.tipStates).forEach(([tipNumber, tipData]) => {
-                    updateTipState(parseInt(tipNumber), tipData.active);
+                    if (!isNaN(parseInt(tipNumber))) {
+                        updateTipState(parseInt(tipNumber), tipData.active);
+                    }
                 });
+                
+                // Load work position data if available
+                if (response.tipStates.work_position) {
+                    const wpData = response.tipStates.work_position;
+                    console.log('Loading saved work position data:', wpData);
+                    
+                    // Create a properly formatted work position update
+                    // Handle both old format (position_mm/setpoint_mm) and new format (current_position/setpoint)
+                    const formattedData = {
+                        current_position: wpData.current_position || wpData.position_mm || 0,
+                        setpoint: wpData.setpoint || wpData.setpoint_mm || 0,
+                        speed_mode: wpData.speed_mode || 'rapid',
+                        tip_distances: {},
+                        tip_states: {}
+                    };
+                    
+                    // Ensure all tip distances are present
+                    for (let i = 1; i <= 8; i++) {
+                        formattedData.tip_distances[i] = (wpData.tip_distances && wpData.tip_distances[i]) || 0;
+                    }
+                    
+                    // Merge tip states from both sources
+                    // First, get states from individual tip data
+                    Object.entries(response.tipStates).forEach(([tipNumber, tipData]) => {
+                        if (!isNaN(parseInt(tipNumber))) {
+                            formattedData.tip_states[parseInt(tipNumber)] = tipData.active;
+                        }
+                    });
+                    
+                    // Don't override with work position tip states - use individual tip data only
+                    
+                    // Apply the work position update
+                    handleWorkPositionUpdate(formattedData);
+                }
             }
         }).catch(error => {
-            console.error('Error loading tip states:', error);
+            console.error('Error loading initial state:', error);
         });
     }
-    
-    // Send a message to request current state
-    sendMessage({
-        type: 'request_work_position_state'
-    });
 }
 
 function cacheElements() {
@@ -187,6 +215,56 @@ function setupIPCListeners() {
         const { tipNumber, active } = event.detail;
         updateTipState(tipNumber, active);
     });
+}
+
+// Send work position commands to controller
+function sendWorkPositionCommand(command) {
+    if (window.electronAPI && window.electronAPI.sendMessage) {
+        window.electronAPI.sendMessage('send_to_serial', command)
+            .then(response => {
+                console.log('Work position command sent:', command);
+            })
+            .catch(error => {
+                console.error('Error sending work position command:', error);
+            });
+    }
+}
+
+// Send button state to controller
+function sendButtonStateToController(button, pressed) {
+    const command = {
+        type: 'WPB', // Work Position Button
+        button: button,
+        pressed: pressed,
+        speed_mode: buttonStates.speedMode,
+        timestamp: Date.now()
+    };
+    
+    const packet = `WPB:${JSON.stringify(command)}`;
+    sendWorkPositionCommand(packet);
+}
+
+// Send speed mode to controller
+function sendSpeedModeToController(mode) {
+    const command = {
+        type: 'WPS', // Work Position Speed
+        speed_mode: mode,
+        timestamp: Date.now()
+    };
+    
+    const packet = `WPS:${JSON.stringify(command)}`;
+    sendWorkPositionCommand(packet);
+}
+
+// Send set work position command
+function sendSetWorkPositionCommand() {
+    const command = {
+        type: 'WPT', // Work Position seT
+        timestamp: Date.now()
+    };
+    
+    const packet = `WPT:${JSON.stringify(command)}`;
+    sendWorkPositionCommand(packet);
 }
 
 function handleMessage(message) {
@@ -355,13 +433,21 @@ function updateTipState(tipNumber, active) {
 
 function handleWorkPositionUpdate(data) {
     console.log('Work position update received:', data);
+    console.log('Current position element exists:', !!elements.currentPositionText);
+    console.log('Setpoint element exists:', !!elements.setpointText);
     
     // Update all work position data at once
     if (data.current_position !== undefined) {
-        updateElement('current-position-text', `${data.current_position.toFixed(1)} mm`);
+        console.log('Updating current position to:', data.current_position);
+        const currentPosText = `${parseFloat(data.current_position).toFixed(1)} mm`;
+        updateElement('current-position-text', currentPosText);
+        console.log('Updated current position element to:', currentPosText);
     }
     if (data.setpoint !== undefined) {
-        updateElement('setpoint-text', `${data.setpoint.toFixed(1)} mm`);
+        console.log('Updating setpoint to:', data.setpoint);
+        const setpointText = `${parseFloat(data.setpoint).toFixed(1)} mm`;
+        updateElement('setpoint-text', setpointText);
+        console.log('Updated setpoint element to:', setpointText);
     }
     if (data.speed_mode !== undefined) {
         updateSpeedButtons(data.speed_mode === 'rapid', data.speed_mode === 'fine');
@@ -379,13 +465,22 @@ function handleWorkPositionUpdate(data) {
         }
     }
     
-    // Update tip states
+    // Update tip states - only update if changed to prevent flashing
     if (data.tip_states) {
         console.log('Updating tip states:', data.tip_states);
         for (let i = 1; i <= 8; i++) {
             if (data.tip_states[i] !== undefined) {
-                console.log(`Setting tip ${i} to ${data.tip_states[i] ? 'active' : 'inactive'}`);
-                updateTipState(i, data.tip_states[i]);
+                const tipElement = elements.tipElements[i];
+                if (tipElement && tipElement.container) {
+                    // Check current state to avoid unnecessary updates
+                    const isCurrentlyActive = tipElement.container.className === 'tip-slider-active';
+                    const shouldBeActive = data.tip_states[i];
+                    
+                    if (isCurrentlyActive !== shouldBeActive) {
+                        console.log(`Setting tip ${i} to ${shouldBeActive ? 'active' : 'inactive'}`);
+                        updateTipState(i, shouldBeActive);
+                    }
+                }
             }
         }
     }
@@ -405,15 +500,13 @@ function setupEventHandlers() {
             // Update UI immediately for responsiveness
             updateSpeedButtons(true, false);
             
-            // Send message multiple times to ensure delivery
-            for (let i = 0; i < 2; i++) {
-                sendMessage({
-                    type: 'set_speed_mode',
-                    mode: 'rapid'
-                });
-                if (i < 1) {
-                    await new Promise(resolve => setTimeout(resolve, 20));
-                }
+            // Update state and send to controller
+            buttonStates.speedMode = 'rapid';
+            sendSpeedModeToController('rapid');
+            
+            // Save speed mode to JSON
+            if (window.electronAPI && window.electronAPI.sendMessage) {
+                window.electronAPI.sendMessage('save_work_position_speed', { speed_mode: 'rapid' });
             }
         });
     }
@@ -428,15 +521,13 @@ function setupEventHandlers() {
             // Update UI immediately for responsiveness
             updateSpeedButtons(false, true);
             
-            // Send message multiple times to ensure delivery
-            for (let i = 0; i < 2; i++) {
-                sendMessage({
-                    type: 'set_speed_mode',
-                    mode: 'fine'
-                });
-                if (i < 1) {
-                    await new Promise(resolve => setTimeout(resolve, 20));
-                }
+            // Update state and send to controller
+            buttonStates.speedMode = 'fine';
+            sendSpeedModeToController('fine');
+            
+            // Save speed mode to JSON
+            if (window.electronAPI && window.electronAPI.sendMessage) {
+                window.electronAPI.sendMessage('save_work_position_speed', { speed_mode: 'fine' });
             }
         });
     }
@@ -568,14 +659,7 @@ function setupEventHandlers() {
     }
 }
 
-function sendMessage(message) {
-    // Send message to main process via IPC
-    if (window.electronAPI && window.electronAPI.sendToPython) {
-        window.electronAPI.sendToPython(message);
-    } else {
-        console.warn('IPC not available');
-    }
-}
+
 
 // Confirmation overlay logic
 function showConfirmOverlay() {
@@ -598,8 +682,8 @@ function showConfirmOverlay() {
     };
 
     const onConfirm = async () => {
-        // 1) send command to hardware
-        sendMessage({ type: 'set_work_position' });
+        // 1) Send set work position command to controller
+        sendSetWorkPositionCommand();
 
         // 2) persist to JSON via main process
         const parseMm = (t) => {
@@ -645,18 +729,38 @@ function sendButtonState(button, state) {
         buttonStates.lastSentDown = state;
     }
     
-    // Send the message
-    sendMessage({
-        type: 'button_press',
-        button: button,
-        state: state
-    });
+    // Send button state to controller
+    sendButtonStateToController(button, state);
     
-    // Start watchdog timer for button press
+    // Handle continuous sending for pressed state
     if (state) {
+        // Start watchdog timer for button press
         startButtonWatchdog(button);
+        
+        // Clear any existing interval
+        if (buttonStates.continuousSendIntervals[button]) {
+            clearInterval(buttonStates.continuousSendIntervals[button]);
+        }
+        
+        // Start continuous sending every 250ms (slightly slower to avoid overwhelming serial)
+        buttonStates.continuousSendIntervals[button] = setInterval(() => {
+            if (buttonStates[button]) {
+                console.log(`Continuous send for ${button} button`);
+                sendButtonStateToController(button, true);
+            } else {
+                // Stop if button is no longer pressed
+                clearInterval(buttonStates.continuousSendIntervals[button]);
+                buttonStates.continuousSendIntervals[button] = null;
+            }
+        }, 250);
     } else {
+        // Clear watchdog and continuous send interval
         clearButtonWatchdog(button);
+        
+        if (buttonStates.continuousSendIntervals[button]) {
+            clearInterval(buttonStates.continuousSendIntervals[button]);
+            buttonStates.continuousSendIntervals[button] = null;
+        }
     }
 }
 
@@ -712,5 +816,5 @@ window.WorkPositionController = {
     updateSliderPosition,
     updateTipState,
     handleWorkPositionUpdate,
-    sendMessage
+    sendWorkPositionCommand
 };

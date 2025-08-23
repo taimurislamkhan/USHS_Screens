@@ -1,55 +1,79 @@
 {
   "1": {
     "active": true,
-    "energy_setpoint": 3.3000000000000016,
-    "distance_setpoint": 1.5000000000000002,
-    "heat_start_delay": 3.0000000000000013
+    "energy_setpoint": 3.700000000000002,
+    "distance_setpoint": 2.0000000000000004,
+    "heat_start_delay": 3.0000000000000013,
+    "current_joules": 0,
+    "current_distance": 0,
+    "current_heat_percentage": 0
   },
   "2": {
     "active": true,
     "energy_setpoint": 0.6,
     "distance_setpoint": 0.7999999999999999,
-    "heat_start_delay": 0.7999999999999999
+    "heat_start_delay": 0.7999999999999999,
+    "current_joules": 0,
+    "current_distance": 0,
+    "current_heat_percentage": 0
   },
   "3": {
     "active": true,
     "energy_setpoint": 1.0999999999999999,
     "distance_setpoint": 0.9999999999999999,
-    "heat_start_delay": 0
+    "heat_start_delay": 0,
+    "current_joules": 0,
+    "current_distance": 0,
+    "current_heat_percentage": 0
   },
   "4": {
     "active": true,
     "energy_setpoint": 0,
     "distance_setpoint": 0,
-    "heat_start_delay": 0
+    "heat_start_delay": 0,
+    "current_joules": 0,
+    "current_distance": 0,
+    "current_heat_percentage": 0
   },
   "5": {
     "active": true,
     "energy_setpoint": 0.7999999999999999,
     "distance_setpoint": 0,
-    "heat_start_delay": 0
+    "heat_start_delay": 0,
+    "current_joules": 0,
+    "current_distance": 0,
+    "current_heat_percentage": 0
   },
   "6": {
     "active": true,
     "energy_setpoint": 0.6,
     "distance_setpoint": 0,
-    "heat_start_delay": 0
+    "heat_start_delay": 0,
+    "current_joules": 0,
+    "current_distance": 0,
+    "current_heat_percentage": 0
   },
   "7": {
     "active": true,
     "energy_setpoint": 0,
     "distance_setpoint": 0,
-    "heat_start_delay": 0
+    "heat_start_delay": 0,
+    "current_joules": 0,
+    "current_distance": 0,
+    "current_heat_percentage": 0
   },
   "8": {
     "active": true,
     "energy_setpoint": 0.5,
     "distance_setpoint": 0.7,
-    "heat_start_delay": 0.5
+    "heat_start_delay": 0.5,
+    "current_joules": 0,
+    "current_distance": 0,
+    "current_heat_percentage": 0
   },
   "configuration": {
-    "weld_time": 3.179999999999976,
-    "pulse_energy": 29.100000000000165,
+    "weld_time": 3.2099999999999755,
+    "pulse_energy": 29.50000000000017,
     "cool_time": 0.11999999999999998,
     "presence_height": 0.11000000000000008,
     "boss_tolerance_minus": 0.009000000000000001,
@@ -62,8 +86,37 @@
     "history": []
   },
   "work_position": {
-    "position_mm": 0.5,
-    "setpoint_mm": 1.8,
-    "updated_at": "2025-08-11T16:50:34.800Z"
+    "current_position": 1.1,
+    "setpoint": 0.9,
+    "speed_mode": "fine",
+    "tip_distances": {
+      "1": 1.2,
+      "2": 0,
+      "3": 0.7,
+      "4": 0,
+      "5": 0,
+      "6": 0,
+      "7": 0,
+      "8": 0
+    },
+    "position_mm": 1.1,
+    "setpoint_mm": 0.9,
+    "updated_at": "2025-08-23T19:37:45.305Z"
+  },
+  "cycle_progress": {
+    "home": "done",
+    "work_position": "done",
+    "encoder_zero": "active",
+    "heat": "inactive",
+    "cool": "inactive",
+    "cycle_complete": "inactive"
+  },
+  "home_screen": {
+    "banner_text": "System Is Ready",
+    "processing_text": "Processing...",
+    "spinner_active": true,
+    "percentage": 0,
+    "time_text": "∼1m 46sec",
+    "slider_position": 0
   }
 }

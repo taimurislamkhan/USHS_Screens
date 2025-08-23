@@ -631,6 +631,11 @@
   top: 2.25px;
   overflow: visible;
   aspect-ratio: 1;
+  /* Animation controlled by .spinning class */
+}
+
+/* Apply animation when spinning class is present */
+.spinner.spinning .icon-spinner {
   animation: spin 2s linear infinite;
 }
 

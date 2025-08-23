@@ -342,7 +342,7 @@
       // Update UI immediately
       updateTipUI(tipNumber);
       
-      // Save to JSON file and write to Modbus
+      // Save to JSON file
       try {
         await window.electronAPI.sendMessage('update_tip_state', {
           tipNumber: tipNumber,
@@ -450,9 +450,7 @@
       }
     }
 
-    // Note: Removed updateModbusValues() function
-    // The heating screen now only WRITES TO Modbus, it doesn't read FROM Modbus for display
-    // Display values come from JSON only, Modbus is only used for sending commands to hardware
+
     
     // Load setpoints from JSON on initialization
     async function loadSetpoints() {
@@ -578,48 +576,14 @@
     // Initialize when page loads
     document.addEventListener('DOMContentLoaded', () => {
       initializeTipStates();
-      // Removed updateModbusValues() - we only write TO Modbus, not read from it for display
+
       loadSetpoints();  // Load saved setpoints from JSON
       checkForSetpointUpdates();  // Check if returning from tip settings
       
       // Set timestamp for this heating screen load
       localStorage.setItem('lastHeatingLoad', Date.now().toString());
       
-      // Removed request for heating values from Python - we only read from JSON for display
-      // Python should only receive write commands, not send display updates
-      
-      // Write initial setpoints from JSON to Modbus
-      setTimeout(async () => {
-        try {
-          const response = await window.electronAPI.sendMessage('read_tip_states');
-          if (response && response.tipStates) {
-            for (let i = 1; i <= 8; i++) {
-              const tipData = response.tipStates[i];
-              if (tipData) {
-                // Write energy setpoint to Modbus
-                if (tipData.energy_setpoint !== undefined) {
-                  window.electronAPI.sendToPython({
-                    type: 'update_heating_energy',
-                    tipNumber: i,
-                    value: tipData.energy_setpoint
-                  });
-                }
-                
-                // Write distance setpoint to Modbus
-                if (tipData.distance_setpoint !== undefined) {
-                  window.electronAPI.sendToPython({
-                    type: 'update_heating_distance',
-                    tipNumber: i,
-                    value: tipData.distance_setpoint
-                  });
-                }
-              }
-            }
-          }
-        } catch (error) {
-          console.error('Error writing initial setpoints to Modbus:', error);
-        }
-      }, 1000); // Delay to ensure Python connection is ready
+
     });
   </script>
 </body>

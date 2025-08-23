@@ -1,7 +1,8 @@
 const { app, BrowserWindow, ipcMain, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const WebSocket = require('ws');
+const SerialHandler = require('./serial-handler');
+
 
 // Disable sandbox for Linux environments
 if (process.platform === 'linux') {
@@ -9,9 +10,11 @@ if (process.platform === 'linux') {
   process.env.ELECTRON_DISABLE_SANDBOX = '1';
 }
 
-// Add command line switches for sandbox issues
+// Add command line switches for sandbox and GPU issues
 app.commandLine.appendSwitch('no-sandbox');
 app.commandLine.appendSwitch('disable-setuid-sandbox');
+app.commandLine.appendSwitch('disable-gpu');
+app.commandLine.appendSwitch('disable-gpu-sandbox');
 
 // Load configuration
 let config = {};
@@ -35,8 +38,14 @@ try {
 
 // Keep a global reference of the window object
 let mainWindow;
-let wss; // WebSocket server
+
+// Serial communication handler
+let serialHandler = null;
+
 let cachedUIState = {}; // Cache UI state for seamless transitions
+
+// Debounce timer for work position updates
+let workPositionUpdateTimer = null;
 
 function createWindow() {
   // Create the browser window
@@ -64,17 +73,52 @@ function createWindow() {
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
   });
+  
+  // Note: Initial tip data loading is now handled by individual pages
+  // HomeScreen.html handles its own initialization via initializeTipStates()
+  // This prevents timing conflicts between state switching and data loading
+  mainWindow.webContents.once('did-finish-load', () => {
+    console.log('Initial page load complete');
+    
+    // Load initial cycle progress from JSON file
+    try {
+      const tipStatesPath = path.join(__dirname, 'tip_states.json');
+      const data = fs.readFileSync(tipStatesPath, 'utf8');
+      const jsonData = JSON.parse(data);
+      
+      if (jsonData.cycle_progress) {
+        cachedUIState.progressStates = jsonData.cycle_progress;
+        console.log('Loaded initial cycle progress states:', cachedUIState.progressStates);
+        
+        // Send initial progress states to renderer
+        mainWindow.webContents.send('update-progress-states', jsonData.cycle_progress);
+      }
+      
+      // Load home screen data
+      if (jsonData.home_screen) {
+        cachedUIState.homeScreenData = jsonData.home_screen;
+        console.log('Loaded initial home screen data:', cachedUIState.homeScreenData);
+        
+        // Send initial home screen data to renderer
+        mainWindow.webContents.send('home-screen-update', jsonData.home_screen);
+      }
+    } catch (error) {
+      console.log('Could not load initial cycle progress states:', error.message);
+    }
+  });
 
   // Handle window closed
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
 
-  // Start WebSocket server
-  startWebSocketServer();
+
 
   // Create application menu
   createMenu();
+  
+  // Initialize serial handler
+  initializeSerialHandler();
 }
 
 function createMenu() {
@@ -161,6 +205,7 @@ ipcMain.handle('get-app-name', () => {
 
 // Handle navigation requests
 ipcMain.on('navigate-to-page', (event, path) => {
+  console.log('Navigation requested to:', path);
   if (mainWindow) {
     mainWindow.loadFile(path);
     
@@ -168,22 +213,136 @@ ipcMain.on('navigate-to-page', (event, path) => {
     mainWindow.webContents.once('did-finish-load', () => {
       // Batch all cached updates into a single message for home page
       if (path === 'index.html' || path === '') {
-        const batchedUpdates = {
-          elements: cachedUIState.elements || {},
-          progressBars: cachedUIState.progressBars || {},
-          progressStates: cachedUIState.progressStates || {},
-          tipStates: cachedUIState.tipStates || {}
-        };
-        
-        // Send all updates in one message
-        mainWindow.webContents.send('batch-update', batchedUpdates);
-        
-        // Request fresh values immediately
-        mainWindow.webContents.send('page-navigated-home');
+        // Read fresh tip data from JSON file
+        try {
+          const tipStatesPath = require('path').join(__dirname, 'tip_states.json');
+          const tipStatesData = fs.readFileSync(tipStatesPath, 'utf8');
+          const tipStates = JSON.parse(tipStatesData);
+          
+          // Convert to tip data format
+          const freshTipData = [];
+          for (let i = 1; i <= 8; i++) {
+            const tipState = tipStates[i.toString()];
+            if (tipState) {
+              freshTipData.push({
+                tip_number: i,
+                joules: tipState.current_joules || 0,
+                distance: tipState.current_distance || 0,
+                heat_percentage: tipState.current_heat_percentage || 0
+              });
+            }
+          }
+          
+          // Load cycle progress from JSON
+          const cycleProgress = tipStates.cycle_progress || {
+            home: 'inactive',
+            work_position: 'inactive',
+            encoder_zero: 'inactive',
+            heat: 'inactive',
+            cool: 'inactive',
+            cycle_complete: 'inactive'
+          };
+          
+          console.log('Navigation: Loading cycle progress from JSON:', cycleProgress);
+          
+          // Update cached state with loaded cycle progress
+          cachedUIState.progressStates = cycleProgress;
+          
+          // Update cached home screen data if available
+          if (tipStates.home_screen) {
+            cachedUIState.homeScreenData = tipStates.home_screen;
+            console.log('Navigation: Loading home screen data from JSON:', tipStates.home_screen);
+          }
+          
+          const batchedUpdates = {
+            elements: cachedUIState.elements || {},
+            progressBars: cachedUIState.progressBars || {},
+            progressStates: cycleProgress,
+            tipStates: cachedUIState.tipStates || {},
+            currentTipData: freshTipData, // Use fresh data from file
+            homeScreen: cachedUIState.homeScreenData || tipStates.home_screen
+          };
+          
+          console.log('Navigation: Sending batch update with progressStates:', batchedUpdates.progressStates);
+          
+          // Delay sending updates to ensure HomeScreen.html is loaded
+          setTimeout(() => {
+            // Send all updates in one message
+            mainWindow.webContents.send('batch-update', batchedUpdates);
+            
+            // Also send cycle progress states directly
+            mainWindow.webContents.send('update-progress-states', cycleProgress);
+            
+            // Also send tip data update directly with cycle progress and home screen data
+            if (freshTipData.length > 0) {
+              mainWindow.webContents.send('tip-data-update', {
+                tips: freshTipData,
+                cycleProgress: cycleProgress,
+                homeScreen: cachedUIState.homeScreenData || tipStates.home_screen
+              });
+            }
+            
+            // Request fresh values immediately
+            mainWindow.webContents.send('page-navigated-home');
+          }, 500); // Give time for HomeScreen.html to load
+        } catch (error) {
+          console.error('Error reading tip states on navigation:', error);
+          
+          // Fallback to cached data
+          const batchedUpdates = {
+            elements: cachedUIState.elements || {},
+            progressBars: cachedUIState.progressBars || {},
+            progressStates: cachedUIState.progressStates || {},
+            tipStates: cachedUIState.tipStates || {},
+            currentTipData: cachedUIState.currentTipData || [],
+            homeScreen: cachedUIState.homeScreenData || {}
+          };
+          
+          // Delay sending updates to ensure HomeScreen.html is loaded
+          setTimeout(() => {
+            // Send all updates in one message
+            mainWindow.webContents.send('batch-update', batchedUpdates);
+            
+            // Also send cycle progress states directly
+            if (cachedUIState.progressStates) {
+              mainWindow.webContents.send('update-progress-states', cachedUIState.progressStates);
+            }
+            
+            // Request fresh values immediately
+            mainWindow.webContents.send('page-navigated-home');
+          }, 500); // Give time for HomeScreen.html to load
+        }
       } else {
         // For other pages, use the normal update method
-        if (cachedUIState.workPositionData) {
-          mainWindow.webContents.send('work-position-update', cachedUIState.workPositionData);
+        if (path.includes('work_position') && cachedUIState.workPositionData) {
+          // For work position page, merge tip states from main tip data
+          try {
+            const tipStatesPath = require('path').join(__dirname, 'tip_states.json');
+            const data = fs.readFileSync(tipStatesPath, 'utf8');
+            const tipStates = JSON.parse(data);
+            
+            // Create merged work position data
+            const mergedWPData = {
+              ...cachedUIState.workPositionData,
+              tip_states: {}
+            };
+            
+            // First add individual tip active states
+            Object.entries(tipStates).forEach(([tipNumber, tipData]) => {
+              if (!isNaN(parseInt(tipNumber))) {
+                mergedWPData.tip_states[parseInt(tipNumber)] = tipData.active || false;
+              }
+            });
+            
+            // Don't override with saved work position tip states - they should come from individual tip data only
+            
+            console.log('Sending merged work position data on navigation:', mergedWPData);
+            mainWindow.webContents.send('work-position-update', mergedWPData);
+          } catch (error) {
+            console.error('Error loading work position data:', error);
+            // Fallback to cached data
+            mainWindow.webContents.send('work-position-update', cachedUIState.workPositionData);
+          }
         }
       }
     });
@@ -219,14 +378,7 @@ ipcMain.on('reload-window', () => {
   }
 });
 
-// Handle messages to Python script
-ipcMain.on('send-to-python', (event, data) => {
-  if (wss && wss.clients.size > 0) {
-    // Send to the first connected client (Python script)
-    const client = Array.from(wss.clients)[0];
-    client.send(JSON.stringify(data));
-  }
-});
+
 
 // Handle request for cached UI state
 ipcMain.handle('get-cached-state', () => {
@@ -239,7 +391,54 @@ ipcMain.handle('read_tip_states', async () => {
     const tipStatesPath = path.join(__dirname, 'tip_states.json');
     const data = fs.readFileSync(tipStatesPath, 'utf8');
     const tipStates = JSON.parse(data);
-    return { tipStates };
+    
+    // Also send tip data update to renderer immediately
+    if (mainWindow) {
+      const tipData = [];
+      for (let i = 1; i <= 8; i++) {
+        const tipState = tipStates[i.toString()];
+        if (tipState) {
+          tipData.push({
+            tip_number: i,
+            joules: tipState.current_joules || 0,
+            distance: tipState.current_distance || 0,
+            heat_percentage: tipState.current_heat_percentage || 0
+          });
+        }
+      }
+      
+      // Get cycle progress from the JSON
+      const cycleProgress = tipStates.cycle_progress || {
+        home: 'inactive',
+        work_position: 'inactive',
+        encoder_zero: 'inactive',
+        heat: 'inactive',
+        cool: 'inactive',
+        cycle_complete: 'inactive'
+      };
+      
+      // Get home screen data from the JSON
+      const homeScreen = tipStates.home_screen || {
+        banner_text: 'System Is Ready',
+        processing_text: 'Processing...',
+        spinner_active: true,
+        percentage: 0,
+        time_text: '∼1m 46sec',
+        slider_position: 0
+      };
+      
+      if (tipData.length > 0) {
+        console.log('Sending tip data update from read_tip_states with cycle progress');
+        // Send tip data, cycle progress, and home screen data in the same event
+        mainWindow.webContents.send('tip-data-update', {
+          tips: tipData,
+          cycleProgress: cycleProgress,
+          homeScreen: homeScreen
+        });
+      }
+    }
+    
+    return { tipStates, cycleProgress: tipStates.cycle_progress, homeScreen: tipStates.home_screen };
   } catch (error) {
     console.error('Error reading tip states:', error);
     return { error: error.message };
@@ -275,15 +474,7 @@ ipcMain.handle('update_tip_state', async (event, { tipNumber, active }) => {
     // Write back to file
     fs.writeFileSync(tipStatesPath, JSON.stringify(tipStates, null, 2));
     
-    // Send to Python script via WebSocket to write to Modbus
-    if (wss && wss.clients.size > 0) {
-      const client = Array.from(wss.clients)[0];
-      client.send(JSON.stringify({
-        type: 'update_tip_active',
-        tipNumber: tipNumber,
-        active: active
-      }));
-    }
+
     
     // Notify all renderer processes about the change
     if (mainWindow) {
@@ -434,9 +625,20 @@ ipcMain.handle('save_work_position_json', async (event, { positionMm, setpointMm
     const numericPosition = Number(positionMm) || 0;
     const numericSetpoint = Number(setpointMm) || 0;
 
+    // Ensure work_position exists with all required fields
+    if (!dataObj.work_position) {
+      dataObj.work_position = {
+        tip_distances: {}
+      };
+    }
+    
+    // Update work position with both old and new format for compatibility
     dataObj.work_position = {
-      position_mm: numericPosition,
-      setpoint_mm: numericSetpoint,
+      ...dataObj.work_position,
+      current_position: numericPosition,
+      setpoint: numericSetpoint,
+      position_mm: numericPosition,  // Keep for backward compatibility
+      setpoint_mm: numericSetpoint,  // Keep for backward compatibility
       updated_at: new Date().toISOString()
     };
 
@@ -448,151 +650,47 @@ ipcMain.handle('save_work_position_json', async (event, { positionMm, setpointMm
   }
 });
 
-// WebSocket server functions
-function startWebSocketServer() {
-  wss = new WebSocket.Server({ port: 8080 });
-  
-  wss.on('connection', (ws) => {
-    console.log('Python script connected to WebSocket server');
+// Save work position speed mode
+ipcMain.handle('save_work_position_speed', async (event, { speed_mode }) => {
+  try {
+    const tipStatesPath = path.join(__dirname, 'tip_states.json');
+    let tipStates = {};
     
-    ws.on('message', (message) => {
-      try {
-        const data = JSON.parse(message);
-        
-        if (data.type === 'update_element' && mainWindow) {
-          // Cache the element state
-          if (!cachedUIState.elements) cachedUIState.elements = {};
-          cachedUIState.elements[data.element_id] = {
-            property: data.property || 'textContent',
-            value: data.value || data.text || ''
-          };
-          
-          // Send message to renderer process to update DOM
-          mainWindow.webContents.send('update-element', {
-            elementId: data.element_id,
-            property: data.property || 'textContent',
-            value: data.value || data.text || ''
-          });
-        } else if (data.type === 'update_progress_bar' && mainWindow) {
-          // Cache progress bar state
-          if (!cachedUIState.progressBars) cachedUIState.progressBars = {};
-          cachedUIState.progressBars[data.element_id] = data.progress;
-          
-          // Send message to renderer process to update progress bar
-          mainWindow.webContents.send('update-progress-bar', {
-            elementId: data.element_id,
-            progress: data.progress
-          });
-        } else if (data.type === 'update_slider' && mainWindow) {
-          // Cache slider position
-          cachedUIState.sliderPosition = data.position;
-          
-          // Send message to renderer process to update slider position
-          mainWindow.webContents.send('update-slider', {
-            position: data.position
-          });
-        } else if (data.type === 'update_progress_states' && mainWindow) {
-          // Cache progress states
-          cachedUIState.progressStates = data.states;
-          
-          // Send message to renderer process to update progress states
-          mainWindow.webContents.send('update-progress-states', {
-            states: data.states
-          });
-        } else if (data.type === 'update_progress_text' && mainWindow) {
-          // Cache progress text
-          cachedUIState.progressText = data.text;
-          
-          // Send message to renderer process to update progress text
-          mainWindow.webContents.send('update-progress-text', {
-            text: data.text
-          });
-        } else if (data.type === 'update_tip_state' && mainWindow) {
-          // Cache tip states
-          if (!cachedUIState.tipStates) cachedUIState.tipStates = {};
-          cachedUIState.tipStates[data.tip_number] = data.is_active;
-          
-          // Send message to renderer process to update tip active/inactive state
-          mainWindow.webContents.send('update-tip-state', {
-            tipNumber: data.tip_number,
-            isActive: data.is_active
-          });
-        } else if (data.type === 'work_position_update' && mainWindow) {
-          // Cache work position data
-          cachedUIState.workPositionData = data.data;
-          
-          // Send work position update to all renderer windows
-          mainWindow.webContents.send('work-position-update', data.data);
-          // Also send to all other windows
-          BrowserWindow.getAllWindows().forEach(window => {
-            if (window !== mainWindow) {
-              window.webContents.send('work-position-update', data.data);
-            }
-          });
-        } else if (data.type === 'update_speed_buttons' && mainWindow) {
-          // Send speed button update to renderer
-          BrowserWindow.getAllWindows().forEach(window => {
-            window.webContents.send('update-speed-buttons', {
-              rapid_active: data.rapid_active,
-              fine_active: data.fine_active
-            });
-          });
-        } else if (data.type === 'update_button_state' && mainWindow) {
-          // Send button state update to renderer
-          BrowserWindow.getAllWindows().forEach(window => {
-            window.webContents.send('update-button-state', {
-              button_id: data.button_id,
-              pressed: data.pressed
-            });
-          });
-        } else if (data.type === 'modbus_update' && mainWindow) {
-          // Send Modbus data update to all renderer windows
-          BrowserWindow.getAllWindows().forEach(window => {
-            window.webContents.send('modbus-update', data);
-          });
-        } else if (data.type === 'heating_update' && mainWindow) {
-          // Send heating setpoint update to all renderer windows
-          BrowserWindow.getAllWindows().forEach(window => {
-            window.webContents.send('heating-update', data);
-          });
-        } else if (data.type === 'monitor_update' && mainWindow) {
-          // Forward monitor screen updates to all windows
-          BrowserWindow.getAllWindows().forEach(window => {
-            window.webContents.send('monitor-update', data);
-          });
-        } else if (data.type === 'manual_controls_update' && mainWindow) {
-          // Forward manual controls updates to all windows
-          BrowserWindow.getAllWindows().forEach(window => {
-            window.webContents.send('manual-controls-update', data);
-          });
-        } else if (data.type === 'update_slider_position' && mainWindow) {
-          // Send slider position update to renderer
-          BrowserWindow.getAllWindows().forEach(window => {
-            window.webContents.send('update-slider-position', {
-              slider_id: data.slider_id,
-              percentage: data.percentage
-            });
-          });
-        }
-      } catch (error) {
-        console.error('Error parsing WebSocket message:', error);
-      }
-    });
+    // Read existing file
+    try {
+      const data = fs.readFileSync(tipStatesPath, 'utf8');
+      tipStates = JSON.parse(data);
+    } catch (err) {
+      console.log('Creating new tip states file');
+    }
     
-    ws.on('close', () => {
-      console.log('Python script disconnected from WebSocket server');
-    });
-  });
-  
-  console.log('WebSocket server started on port 8080');
-}
-
-// Clean up WebSocket server when app quits
-app.on('before-quit', () => {
-  if (wss) {
-    wss.close();
+    // Update work position speed mode
+    if (!tipStates.work_position) {
+      tipStates.work_position = {};
+    }
+    
+    tipStates.work_position.speed_mode = speed_mode;
+    tipStates.work_position.updated_at = new Date().toISOString();
+    
+    // Save updated states
+    fs.writeFileSync(tipStatesPath, JSON.stringify(tipStates, null, 2));
+    
+    console.log('Work position speed mode saved:', speed_mode);
+    
+    // Also update cached state
+    if (!cachedUIState.workPositionData) {
+      cachedUIState.workPositionData = {};
+    }
+    cachedUIState.workPositionData.speed_mode = speed_mode;
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error saving work position speed mode:', error);
+    return { error: error.message };
   }
 });
+
+
 
 // Simple JSON storage for monitor stats (cycles)
 ipcMain.handle('read_monitor_stats', async () => {
@@ -625,4 +723,343 @@ ipcMain.handle('update_monitor_stats', async (event, payload) => {
   } catch (e) {
     return { error: e.message };
   }
+});
+
+// Initialize serial handler
+function initializeSerialHandler() {
+  serialHandler = new SerialHandler();
+  
+  // Handle serial events
+  serialHandler.on('connected', (port) => {
+    console.log(`Serial connected to ${port}`);
+    if (mainWindow) {
+      mainWindow.webContents.send('serial-connected', port);
+    }
+  });
+  
+  serialHandler.on('disconnected', () => {
+    console.log('Serial disconnected');
+    if (mainWindow) {
+      mainWindow.webContents.send('serial-disconnected');
+    }
+  });
+  
+  serialHandler.on('error', (error) => {
+    console.error('Serial error:', error);
+    if (mainWindow) {
+      mainWindow.webContents.send('serial-error', error.message);
+    }
+  });
+  
+  serialHandler.on('cycleProgress', async (stateIndex) => {
+    console.log(`Cycle progress update: ${stateIndex}`);
+    
+    // Convert state index to progress states object
+    const progressStates = {
+      home: 'inactive',
+      work_position: 'inactive',
+      encoder_zero: 'inactive',
+      heat: 'inactive',
+      cool: 'inactive',
+      cycle_complete: 'inactive'
+    };
+    
+    const stages = ['home', 'work_position', 'encoder_zero', 'heat', 'cool', 'cycle_complete'];
+    
+    if (stateIndex >= 0 && stateIndex <= 6) {
+      // Update states based on index
+      for (let i = 0; i < stages.length; i++) {
+        if (i < stateIndex) {
+          progressStates[stages[i]] = 'done';
+        } else if (i === stateIndex && stateIndex < 6) {
+          progressStates[stages[i]] = 'active';
+        } else {
+          progressStates[stages[i]] = 'inactive';
+        }
+      }
+      
+      // Special case: all done
+      if (stateIndex === 6) {
+        stages.forEach(stage => {
+          progressStates[stage] = 'done';
+        });
+      }
+    }
+    
+    // Update cached state
+    if (!cachedUIState.progressStates) {
+      cachedUIState.progressStates = {};
+    }
+    Object.assign(cachedUIState.progressStates, progressStates);
+    
+    // Save to JSON file
+    try {
+      const tipStatesPath = path.join(__dirname, 'tip_states.json');
+      const data = fs.readFileSync(tipStatesPath, 'utf8');
+      const jsonData = JSON.parse(data);
+      
+      // Update cycle progress
+      jsonData.cycle_progress = progressStates;
+      
+      // Write back to file
+      fs.writeFileSync(tipStatesPath, JSON.stringify(jsonData, null, 2));
+      console.log('Cycle progress states saved to file');
+    } catch (error) {
+      console.error('Error saving cycle progress states:', error);
+    }
+    
+    // Send to renderer
+    if (mainWindow) {
+      mainWindow.webContents.send('update-progress-states', progressStates);
+    }
+  });
+  
+  serialHandler.on('homeScreenData', async (homeScreenData) => {
+    console.log('Home screen data update received:', homeScreenData);
+    
+    try {
+      // Read current tip states
+      const tipStatesPath = path.join(__dirname, 'tip_states.json');
+      let tipStates = {};
+      
+      try {
+        const data = fs.readFileSync(tipStatesPath, 'utf8');
+        tipStates = JSON.parse(data);
+      } catch (err) {
+        console.log('Creating new tip states file');
+      }
+      
+      // Update home screen data
+      tipStates.home_screen = homeScreenData;
+      
+      // Save updated states
+      fs.writeFileSync(tipStatesPath, JSON.stringify(tipStates, null, 2));
+      
+      // Cache the home screen data
+      cachedUIState.homeScreenData = homeScreenData;
+      
+      // Send to renderer
+      if (mainWindow) {
+        console.log('Sending home-screen-update IPC event to renderer');
+        mainWindow.webContents.send('home-screen-update', homeScreenData);
+      }
+      
+    } catch (error) {
+      console.error('Error handling home screen data:', error);
+    }
+  });
+  
+  serialHandler.on('tipData', async (tips) => {
+    console.log('Tip data update received:', tips);
+    
+    try {
+      // Read current tip states
+      const tipStatesPath = path.join(__dirname, 'tip_states.json');
+      let tipStates = {};
+      
+      try {
+        const data = fs.readFileSync(tipStatesPath, 'utf8');
+        tipStates = JSON.parse(data);
+      } catch (err) {
+        console.log('Creating new tip states file');
+      }
+      
+      // Update tip data from serial packet
+      tips.forEach(tip => {
+        const tipNum = tip.tip_number.toString();
+        
+        // Keep existing data but update with new values from serial
+        if (!tipStates[tipNum]) {
+          tipStates[tipNum] = {
+            active: true,
+            energy_setpoint: 0,
+            distance_setpoint: 0,
+            heat_start_delay: 0
+          };
+        }
+        
+        // Update real-time values
+        tipStates[tipNum].current_joules = tip.joules;
+        tipStates[tipNum].current_distance = tip.distance;
+        tipStates[tipNum].current_heat_percentage = tip.heat_percentage;
+      });
+      
+      // Save updated states
+      fs.writeFileSync(tipStatesPath, JSON.stringify(tipStates, null, 2));
+      
+      // Cache the tip data for page navigation
+      cachedUIState.currentTipData = tips;
+      
+      // Send to all renderer windows with cycle progress
+      if (mainWindow) {
+        console.log('Sending tip-data-update IPC event to renderer with cycle progress');
+        // Include the current cycle progress state with the tip data
+        mainWindow.webContents.send('tip-data-update', {
+          tips: tips,
+          cycleProgress: cachedUIState.progressStates || tipStates.cycle_progress,
+          homeScreen: cachedUIState.homeScreenData || tipStates.home_screen
+        });
+      } else {
+        console.error('mainWindow is null, cannot send tip data!');
+      }
+      
+    } catch (error) {
+      console.error('Error handling tip data:', error);
+    }
+  });
+  
+  // Handle work position data from controller
+  serialHandler.on('workPositionData', async (wpData) => {
+    console.log('Work position data update received:', wpData);
+    
+    // Clear any existing timer
+    if (workPositionUpdateTimer) {
+      clearTimeout(workPositionUpdateTimer);
+    }
+    
+    // Debounce updates to prevent overwhelming the system
+    workPositionUpdateTimer = setTimeout(async () => {
+      try {
+        // Read current tip states
+        const tipStatesPath = path.join(__dirname, 'tip_states.json');
+        let tipStates = {};
+        
+        try {
+          const data = fs.readFileSync(tipStatesPath, 'utf8');
+          tipStates = JSON.parse(data);
+        } catch (err) {
+          console.log('Creating new tip states file');
+        }
+      
+      // Update work position data
+      if (!tipStates.work_position) {
+        tipStates.work_position = {
+          tip_distances: {},
+          current_position: 0,
+          setpoint: 0,
+          speed_mode: 'rapid'
+        };
+      }
+      
+      // Ensure all tip distances are initialized
+      if (!tipStates.work_position.tip_distances) {
+        tipStates.work_position.tip_distances = {};
+      }
+      
+      for (let i = 1; i <= 8; i++) {
+        if (tipStates.work_position.tip_distances[i] === undefined) {
+          tipStates.work_position.tip_distances[i] = 0;
+        }
+      }
+      
+      // Update work position preserving existing structure
+      const updatedWorkPosition = {
+        current_position: wpData.current_position !== undefined ? wpData.current_position : tipStates.work_position.current_position,
+        setpoint: wpData.setpoint !== undefined ? wpData.setpoint : tipStates.work_position.setpoint,
+        speed_mode: wpData.speed_mode || tipStates.work_position.speed_mode || 'rapid',
+        tip_distances: { ...tipStates.work_position.tip_distances },
+        // Keep old format for backward compatibility
+        position_mm: wpData.current_position !== undefined ? wpData.current_position : tipStates.work_position.current_position,
+        setpoint_mm: wpData.setpoint !== undefined ? wpData.setpoint : tipStates.work_position.setpoint,
+        updated_at: new Date().toISOString()
+      };
+      
+      // Update tip distances if provided
+      if (wpData.tip_distances) {
+        Object.entries(wpData.tip_distances).forEach(([tip, distance]) => {
+          updatedWorkPosition.tip_distances[tip] = distance;
+        });
+      }
+      
+      tipStates.work_position = updatedWorkPosition;
+      
+      // Don't store tip_states in work_position - they should come from individual tip data
+      
+      // Save updated states
+      fs.writeFileSync(tipStatesPath, JSON.stringify(tipStates, null, 2));
+      
+      // Cache the work position data
+      cachedUIState.workPositionData = tipStates.work_position;
+      
+      // Merge in tip states from individual tip data (not from work position packet)
+      const mergedWPData = {
+        ...wpData,
+        tip_states: {}
+      };
+      
+      // Get tip states from individual tip data
+      Object.entries(tipStates).forEach(([tipNumber, tipData]) => {
+        if (!isNaN(parseInt(tipNumber)) && tipData.active !== undefined) {
+          mergedWPData.tip_states[parseInt(tipNumber)] = tipData.active;
+        }
+      });
+      
+      // Send to renderer
+      if (mainWindow) {
+        console.log('Sending work-position-update event to renderer');
+        mainWindow.webContents.send('work-position-update', mergedWPData);
+      } else {
+        console.error('mainWindow is null, cannot send work position data!');
+      }
+      
+      } catch (error) {
+        console.error('Error handling work position data:', error);
+      }
+    }, 100); // 100ms debounce
+  });
+}
+
+// Serial port IPC handlers
+ipcMain.handle('serial-list-ports', async () => {
+  if (serialHandler) {
+    return await serialHandler.listPorts();
+  }
+  return [];
+});
+
+ipcMain.handle('serial-connect', async (event, { port, baudRate }) => {
+  if (serialHandler) {
+    try {
+      await serialHandler.connect(port, baudRate || 9600);
+      return { success: true };
+    } catch (error) {
+      return { error: error.message };
+    }
+  }
+  return { error: 'Serial handler not initialized' };
+});
+
+ipcMain.handle('serial-disconnect', async () => {
+  if (serialHandler) {
+    serialHandler.disconnect();
+    return { success: true };
+  }
+  return { error: 'Serial handler not initialized' };
+});
+
+ipcMain.handle('serial-send', async (event, data) => {
+  if (serialHandler) {
+    serialHandler.send(data);
+    return { success: true };
+  }
+  return { error: 'Serial handler not initialized' };
+});
+
+// Handle send_to_serial from work position screen
+ipcMain.handle('send_to_serial', async (event, data) => {
+  if (serialHandler && serialHandler.isConnected) {
+    serialHandler.send(data);
+    return { success: true };
+  }
+  return { error: 'Serial port not connected' };
+});
+
+ipcMain.handle('serial-get-status', async () => {
+  if (serialHandler) {
+    return {
+      connected: serialHandler.isConnected,
+      port: serialHandler.portPath
+    };
+  }
+  return { connected: false, port: null };
 });
