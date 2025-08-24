@@ -181,12 +181,12 @@ if ! sudo apt install -y \
     libatk-bridge2.0-dev \
     libdrm2 \
     libxss1 \
-    libgconf-2-4 \
     libxrandr2 \
     libasound2-dev \
     libpangocairo-1.0-0 \
     libatk1.0-0 \
     libcairo-gobject2 \
+    libcairo2 \
     libgtk-3-0 \
     libgdk-pixbuf2.0-0 \
     libxcomposite1 \
@@ -196,14 +196,7 @@ if ! sudo apt install -y \
     libxtst6 \
     libnss3 \
     libcups2 \
-    libxrandr2 \
-    libasound2 \
-    libpangocairo-1.0-0 \
-    libatk1.0-0 \
-    libcairo1 \
-    libdrm2 \
-    libgtk-3-0 \
-    libgdk-pixbuf2.0-0; then
+    libasound2; then
     print_error "Failed to install Electron dependencies"
     exit 1
 fi
