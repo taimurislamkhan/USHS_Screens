@@ -224,8 +224,8 @@ deactivate
 
 # 8. Install Node.js project dependencies
 print_status "Installing Node.js project dependencies..."
-npm install
-print_success "Node.js dependencies installed successfully"
+npm install --include=dev
+print_success "Node.js dependencies (including Electron) installed successfully"
 
 # 9. Rebuild native modules for ARM architecture
 print_status "Rebuilding native modules for Raspberry Pi..."
