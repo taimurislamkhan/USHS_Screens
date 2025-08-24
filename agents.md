@@ -24,7 +24,7 @@ The communication protocol uses a text-based format with JSON payloads for compl
 - Maintains configuration and state history
 
 ### UART Configuration
-- **Baud Rate**: 9600
+- **Baud Rate**: 115200
 - **Data Bits**: 8
 - **Stop Bits**: 1
 - **Parity**: None
@@ -94,27 +94,104 @@ WPS:{"type":"WPS","speed_mode":"fine","timestamp":1703123456789}\n
 - Rapid mode: Fast movement speed
 - Fine mode: Slow/precise movement speed
 
-### 3. WPT - Work Position seT Command
-Sent when user confirms setting the work position.
+### 3. WPT - Work Position seT Command (DEPRECATED)
+This command is no longer used. Work position setpoint is now saved by the Electron app when the user confirms setting the work position. The app saves the current position as the setpoint and sends a WPU command to update the controller.
+
+### 4. WPU - Work Position Update Command
+Sent when the work position setpoint is changed by the user.
 
 **Format:**
 ```
-WPT:{"type":"WPT","timestamp":1234567890}\n
+WPU:{"setpoint":15.0,"speed_mode":"rapid"}\n
 ```
 
 **Fields:**
-- `type`: Always "WPT"
-- `timestamp`: Unix timestamp in milliseconds
+- `setpoint`: New work position setpoint in mm (float)
+- `speed_mode`: Current speed mode ("rapid" or "fine")
 
 **Example:**
 ```
-WPT:{"type":"WPT","timestamp":1703123456789}\n
+WPU:{"setpoint":12.5,"speed_mode":"fine"}\n
 ```
 
 **Controller Action:**
-- Set current position as the work position setpoint in controller memory (RAM only)
-- Send updated WP packet back to UI with new setpoint
-- The Electron app will handle saving this to JSON file
+- Update the work position setpoint in controller memory (RAM only)
+- Use this setpoint for work position operations
+
+### 5. SETTINGS - Complete Settings Command
+Sent in response to WAKEUP request from controller. Contains all settings needed to initialize the controller.
+
+**Format:**
+```
+SETTINGS:{"work_position":{...},"tips":[...],"configuration":{...}}\n
+```
+
+**Fields:**
+- `work_position`: Work position settings object
+  - `setpoint`: Work position setpoint in mm (float)
+  - `speed_mode`: Speed mode ("rapid" or "fine")
+- `tips`: Array of 8 tip settings objects
+- `configuration`: Configuration settings object
+
+**Tip Settings Object:**
+```json
+{
+  "tip_number": 1,
+  "active": true,
+  "energy_setpoint": 3.7,
+  "distance_setpoint": 2.0,
+  "heat_start_delay": 3.0
+}
+```
+
+**Configuration Object:**
+```json
+{
+  "weld_time": 3.21,
+  "pulse_energy": 29.5,
+  "cool_time": 0.12,
+  "presence_height": 0.11,
+  "boss_tolerance_minus": 0.009,
+  "boss_tolerance_plus": 0.015
+}
+```
+
+**Example:**
+```
+SETTINGS:{"work_position":{"setpoint":15.0,"speed_mode":"rapid"},"tips":[{"tip_number":1,"active":true,"energy_setpoint":3.7,"distance_setpoint":2.0,"heat_start_delay":3.0},...7 more tips...],"configuration":{"weld_time":3.21,"pulse_energy":29.5,"cool_time":0.12,"presence_height":0.11,"boss_tolerance_minus":0.009,"boss_tolerance_plus":0.015}}\n
+```
+
+**Controller Action:**
+- Store all settings in controller memory (RAM only)
+- Use these settings for operation until next power cycle
+
+### 6. TIPS - Tip Settings Update Command
+Sent when any tip setting is changed.
+
+**Format:**
+```
+TIPS:{"tips":[...]}\n
+```
+
+**Fields:**
+- `tips`: Array of tip settings objects (same structure as in SETTINGS command)
+
+**Controller Action:**
+- Update tip settings in controller memory
+
+### 7. CFG - Configuration Update Command
+Sent when any configuration setting is changed.
+
+**Format:**
+```
+CFG:{"configuration":{...}}\n
+```
+
+**Fields:**
+- `configuration`: Configuration object (same structure as in SETTINGS command)
+
+**Controller Action:**
+- Update configuration settings in controller memory
 
 ## Commands from Controller to Electron App (Outgoing)
 
@@ -193,11 +270,32 @@ WP:{"current_position":12.5,"setpoint":15.0,"speed_mode":"rapid","tip_distances"
 
 **Controller Implementation Notes:**
 - Send when work position data changes
-- Send after receiving WPT command to confirm new setpoint
+- Send after receiving WPU command to confirm new setpoint
 - Tip distances should be 0-8mm range
 - Include all 8 tip distances even if 0
 
-### 3. CP - Cycle Progress Command (Legacy)
+### 3. WAKEUP - Controller Wakeup Request
+Sent by the controller on initialization to request all settings from the Electron app.
+
+**Format:**
+```
+WAKEUP:\n
+```
+
+**Example:**
+```
+WAKEUP:\n
+```
+
+**App Response:**
+The Electron app will respond with a SETTINGS packet containing all current settings.
+
+**Controller Implementation Notes:**
+- Send this immediately after establishing UART connection
+- Wait for SETTINGS response before starting normal operations
+- Can be sent after power-on or reset
+
+### 4. CP - Cycle Progress Command (Legacy)
 Simple cycle progress update. Still supported but TD command is preferred.
 
 **Format:**
@@ -219,10 +317,12 @@ The controller should maintain the following state in RAM only:
 - Current position and setpoint
 - Cycle progress state
 - Tip states (active/inactive, current readings)
+- Tip settings (energy setpoint, distance setpoint, heat start delay)
 - Speed mode (rapid/fine)
 - Motor control states
+- Configuration settings (weld time, pulse energy, etc.)
 
-**No persistent storage is required on the controller side.**
+**No persistent storage is required on the controller side.** All settings are received from the Electron app via the SETTINGS packet on startup.
 
 ### 1. Task Structure
 ```c
@@ -233,7 +333,30 @@ typedef struct {
     int8_t cycleProgress;       // -1 to 6
     TipState_t tips[8];         // Array of tip states
     SpeedMode_t speedMode;      // RAPID or FINE
+    ConfigSettings_t config;    // Configuration settings
 } SystemState_t;
+
+// Tip state structure
+typedef struct {
+    bool active;                // Tip active/inactive
+    float energySetpoint;       // Energy setpoint in joules
+    float distanceSetpoint;     // Distance setpoint in mm  
+    float heatStartDelay;       // Heat start delay in seconds
+    // Runtime values
+    float currentJoules;        // Current joules reading
+    float currentDistance;      // Current distance reading
+    float heatPercentage;       // Current heat percentage
+} TipState_t;
+
+// Configuration settings structure
+typedef struct {
+    float weldTime;             // Weld time in seconds
+    float pulseEnergy;          // Pulse energy in joules
+    float coolTime;             // Cool time in seconds
+    float presenceHeight;       // Presence height in mm
+    float bossToleranceMinus;   // Boss tolerance minus in mm
+    float bossTolerancePlus;    // Boss tolerance plus in mm
+} ConfigSettings_t;
 
 // Recommended FreeRTOS task structure
 typedef struct {
@@ -247,13 +370,54 @@ typedef struct {
 void vUartCommTask(void *pvParameters) {
     // Initialize UART
     // Create packet parser
+    
+    // Send WAKEUP request on startup
+    sendWakeupRequest();
+    
     // Main loop: receive, parse, process, respond
+    while (1) {
+        // Check for incoming packets
+        if (receivePacket(&packet)) {
+            processPacket(&packet);
+        }
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
 }
 
 // Periodic data transmission task
 void vDataTransmitTask(void *pvParameters) {
+    // Wait for settings to be received before starting
+    while (!settingsReceived) {
+        vTaskDelay(pdMS_TO_TICKS(100));
+    }
+    
     // Send TD packets every 100-250ms
-    // Update based on current system state in RAM
+    while (1) {
+        buildAndSendTDPacket(&systemState);
+        vTaskDelay(pdMS_TO_TICKS(100));
+    }
+}
+
+// Send WAKEUP request
+void sendWakeupRequest(void) {
+    sendUartPacket("WAKEUP:\n");
+}
+
+// Handle SETTINGS packet
+void handleSettingsPacket(const char *json) {
+    // Parse work_position object
+    parseWorkPosition(json, &systemState.workPositionSetpoint, 
+                            &systemState.speedMode);
+    
+    // Parse tips array
+    for (int i = 0; i < 8; i++) {
+        parseTipSettings(json, i, &systemState.tips[i]);
+    }
+    
+    // Parse configuration
+    parseConfiguration(json, &systemState.config);
+    
+    settingsReceived = true;
 }
 ```
 
@@ -361,10 +525,12 @@ The Python simulator (`python/controller_simulator.py`) can be used to test your
 
 ### Startup Sequence
 1. Controller initializes with default values (all zeros/inactive states)
-2. Controller → App: `TD:{"cycle_progress":-1,"tips":[...],"home_screen":{...}}\n`
-3. App loads saved state from JSON files (if any)
-4. App → Controller: (No commands until user interaction)
-5. User interactions trigger commands from App to Controller
+2. Controller → App: `WAKEUP:\n` (Request all settings)
+3. App → Controller: `SETTINGS:{"work_position":{...},"tips":[...],"configuration":{...}}\n`
+4. Controller stores received settings in RAM
+5. Controller → App: `TD:{"cycle_progress":-1,"tips":[...],"home_screen":{...}}\n` (Start normal operation)
+6. User interactions trigger commands from App to Controller
+7. Any setting changes in the app trigger update commands (WPU, TIPS, or CFG)
 
 ### Work Position Adjustment
 1. User presses UP button
@@ -374,6 +540,15 @@ The Python simulator (`python/controller_simulator.py`) can be used to test your
 5. User releases UP button
 6. App → Controller: `WPB:{"type":"WPB","button":"up","pressed":false,...}\n`
 7. Controller stops movement
+
+### Setting Work Position
+1. User clicks "Set Work Position" button
+2. App displays confirmation dialog showing current position
+3. User confirms
+4. App saves current position as setpoint to JSON file
+5. App → Controller: `WPU:{"setpoint":12.5,"speed_mode":"rapid"}\n`
+6. Controller updates setpoint in RAM
+7. Controller → App: `WP:{"current_position":12.5,"setpoint":12.5,...}\n` (confirmation)
 
 ### Heating Cycle
 1. Controller → App: `TD:{"cycle_progress":0,...}\n` (Home active)
@@ -396,7 +571,16 @@ The Python simulator (`python/controller_simulator.py`) can be used to test your
 
 - **Controller**: Maintains state in RAM only, resets to defaults on power cycle
 - **Electron App**: Saves/loads all configuration and state data to/from JSON files
-- **On Startup**: Controller sends default values, Electron app restores any saved state
+- **On Startup**: Controller sends WAKEUP request, Electron app responds with all saved settings
 - **During Operation**: Controller sends current values, Electron app saves as needed
+- **Setting Changes**: Any setting change in the app automatically sends update to controller (WPU, TIPS, or CFG)
+
+### Key Changes from Previous Protocol
+
+1. **Baud Rate**: Increased from 9600 to 115200 for faster communication
+2. **Controller Initialization**: Controller now sends WAKEUP request to receive all settings
+3. **Work Position Button**: Now saves current position as setpoint (instead of receiving from controller)
+4. **Automatic Updates**: All setting changes trigger immediate updates to controller
+5. **Comprehensive Settings Transfer**: SETTINGS packet ensures controller has all configuration on startup
 
 This protocol is designed to be simple yet extensible. Additional commands or fields can be added to the JSON structures as needed for future enhancements.
