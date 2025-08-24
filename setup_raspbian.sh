@@ -150,7 +150,8 @@ if ! sudo apt install -y \
     python3-dev \
     python3-pip \
     libudev-dev \
-    pkg-config; then
+    pkg-config \
+    socat; then
     print_error "Failed to install build tools"
     exit 1
 fi
