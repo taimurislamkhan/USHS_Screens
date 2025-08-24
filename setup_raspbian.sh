@@ -96,12 +96,28 @@ if [ "$INSTALL_NODE" = true ]; then
     fi
 fi
 
-# 3. Install Xvfb for virtual display (required for Electron in headless mode)
+# 3. Install build tools for native modules (serialport, etc.)
+print_status "Installing build tools for native module compilation..."
+sudo apt install -y \
+    build-essential \
+    python3-dev \
+    python3-pip \
+    libudev-dev \
+    pkg-config
+print_success "Build tools installed successfully"
+
+# 4. Configure npm for native modules
+print_status "Configuring npm for native module compilation..."
+npm config set python python3
+npm install -g node-gyp
+print_success "npm configured for native modules"
+
+# 5. Install Xvfb for virtual display (required for Electron in headless mode)
 print_status "Installing Xvfb (X Virtual Framebuffer)..."
 sudo apt install -y xvfb
 print_success "Xvfb installed successfully"
 
-# 4. Install additional dependencies for Electron on Raspberry Pi
+# 6. Install additional dependencies for Electron on Raspberry Pi
 print_status "Installing additional dependencies for Electron..."
 sudo apt install -y \
     libnss3-dev \
@@ -134,7 +150,7 @@ sudo apt install -y \
 
 print_success "Additional Electron dependencies installed"
 
-# 5. Install Python dependencies (if needed for the python controller simulator)
+# 7. Install Python dependencies (if needed for the python controller simulator)
 print_status "Setting up Python environment..."
 if [ ! -d "venv" ]; then
     python3 -m venv venv
@@ -148,12 +164,36 @@ if [ -f "python/requirements.txt" ]; then
 fi
 deactivate
 
-# 6. Install Node.js project dependencies
+# 8. Install Node.js project dependencies
 print_status "Installing Node.js project dependencies..."
 npm install
 print_success "Node.js dependencies installed successfully"
 
-# 7. Set up permissions and make scripts executable
+# 9. Rebuild native modules for ARM architecture
+print_status "Rebuilding native modules for Raspberry Pi..."
+npm rebuild
+print_success "Native modules rebuilt successfully"
+
+# 9.1. Verify serialport installation
+print_status "Verifying serialport installation..."
+if node -e "require('serialport'); require('@serialport/parser-readline'); console.log('OK')" 2>/dev/null; then
+    print_success "Serialport module verified successfully"
+else
+    print_warning "Serialport verification failed. Attempting to reinstall..."
+    npm uninstall serialport @serialport/parser-readline
+    npm install serialport@^12.0.0 @serialport/parser-readline@^12.0.0
+    npm rebuild
+    
+    # Test again
+    if node -e "require('serialport'); require('@serialport/parser-readline'); console.log('OK')" 2>/dev/null; then
+        print_success "Serialport module installed successfully after retry"
+    else
+        print_error "Failed to install serialport module. Manual intervention may be required."
+        echo "You may need to run: npm install --build-from-source serialport"
+    fi
+fi
+
+# 10. Set up permissions and make scripts executable
 print_status "Setting up permissions..."
 chmod +x *.sh
 if [ -d "scripts" ]; then
@@ -161,7 +201,7 @@ if [ -d "scripts" ]; then
 fi
 print_success "Permissions set"
 
-# 8. Create a launcher script for easy startup
+# 11. Create a launcher script for easy startup
 print_status "Creating launcher script..."
 cat > start_ushs_headless.sh << 'EOF'
 #!/bin/bash
@@ -181,7 +221,7 @@ EOF
 chmod +x start_ushs_headless.sh
 print_success "Launcher script created: start_ushs_headless.sh"
 
-# 9. Create a desktop launcher script (if running with desktop environment)
+# 12. Create a desktop launcher script (if running with desktop environment)
 print_status "Creating desktop launcher script..."
 cat > start_ushs_desktop.sh << 'EOF'
 #!/bin/bash
@@ -204,7 +244,7 @@ EOF
 chmod +x start_ushs_desktop.sh
 print_success "Desktop launcher script created: start_ushs_desktop.sh"
 
-# 10. Final system configuration
+# 13. Final system configuration
 print_status "Performing final system configuration..."
 
 # Increase virtual memory for better Electron performance on Pi
@@ -249,4 +289,10 @@ print_warning "If you encounter any issues, make sure your Raspberry Pi has:"
 print_warning "• At least 1GB of RAM (2GB+ recommended)"
 print_warning "• Sufficient power supply (3A+ recommended)"
 print_warning "• Updated firmware (sudo rpi-update)"
+echo ""
+print_warning "If you still get 'Cannot find module serialport' errors:"
+print_warning "• Try running: npm install --build-from-source serialport"
+print_warning "• Or run: npm rebuild"
+print_warning "• Make sure build-essential and python3-dev are installed"
+print_warning "• Check that node-gyp is properly configured: npm config get python"
 echo ""
