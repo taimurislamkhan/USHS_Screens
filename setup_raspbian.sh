@@ -161,7 +161,7 @@ print_status "Configuring npm for native module compilation..."
 # Set Python path for node-gyp (newer method)
 export npm_config_python=python3
 export PYTHON=python3
-npm install -g node-gyp
+sudo npm install -g node-gyp
 print_success "npm configured for native modules"
 
 # 5. Install Xvfb for virtual display (required for Electron in headless mode)
