@@ -6,6 +6,12 @@
 #
 # Usage: ./setup_raspbian.sh
 # Run this script from the USHS_Screens directory after cloning the repository
+#
+# Note: If the script gets stuck on "waiting for cache lock", it means another
+# package manager is running. The script will automatically wait and try to
+# resolve this, but you can also manually stop interfering processes:
+#   sudo systemctl stop unattended-upgrades
+#   sudo killall apt apt-get dpkg unattended-upgrade
 
 set -e  # Exit on any error
 
@@ -36,6 +42,43 @@ print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
+# Function to wait for apt locks and kill interfering processes
+wait_for_apt() {
+    local max_attempts=60  # Wait up to 5 minutes (60 * 5 seconds)
+    local attempt=0
+    
+    while [ $attempt -lt $max_attempts ]; do
+        if sudo fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1 || sudo fuser /var/lib/apt/lists/lock >/dev/null 2>&1; then
+            print_warning "Package manager is locked. Waiting... (attempt $((attempt + 1))/$max_attempts)"
+            
+            # Check for common interfering processes
+            local blocking_processes=$(ps aux | grep -E "(apt|dpkg|unattended-upgrade)" | grep -v grep | awk '{print $2}')
+            
+            if [ ! -z "$blocking_processes" ] && [ $attempt -gt 10 ]; then
+                print_warning "Found blocking processes. Attempting to stop them..."
+                
+                # Stop unattended upgrades
+                sudo systemctl stop unattended-upgrades >/dev/null 2>&1 || true
+                sudo killall unattended-upgrade-shutdown >/dev/null 2>&1 || true
+                
+                # Wait a bit more after stopping services
+                sleep 10
+            fi
+            
+            sleep 5
+            attempt=$((attempt + 1))
+        else
+            return 0  # No locks found
+        fi
+    done
+    
+    # If we get here, we've waited too long
+    print_error "Could not acquire package manager lock after 5 minutes"
+    print_error "Please manually stop any running package managers and try again"
+    print_error "You can try: sudo killall apt apt-get dpkg unattended-upgrade"
+    return 1
+}
+
 # Check if running as root
 if [ "$EUID" -eq 0 ]; then
     print_error "Please do not run this script as root. Run as regular user with sudo privileges."
@@ -52,7 +95,11 @@ print_status "Starting setup process for Raspbian OS..."
 
 # 1. Update system packages
 print_status "Updating system package lists..."
-sudo apt update
+wait_for_apt
+if ! sudo apt update; then
+    print_error "Failed to update package lists"
+    exit 1
+fi
 print_success "Package lists updated"
 
 # 2. Install Node.js and npm
@@ -97,12 +144,16 @@ fi
 
 # 3. Install build tools for native modules (serialport, etc.)
 print_status "Installing build tools for native module compilation..."
-sudo apt install -y \
+wait_for_apt
+if ! sudo apt install -y \
     build-essential \
     python3-dev \
     python3-pip \
     libudev-dev \
-    pkg-config
+    pkg-config; then
+    print_error "Failed to install build tools"
+    exit 1
+fi
 print_success "Build tools installed successfully"
 
 # 4. Configure npm for native modules
@@ -113,12 +164,17 @@ print_success "npm configured for native modules"
 
 # 5. Install Xvfb for virtual display (required for Electron in headless mode)
 print_status "Installing Xvfb (X Virtual Framebuffer)..."
-sudo apt install -y xvfb
+wait_for_apt
+if ! sudo apt install -y xvfb; then
+    print_error "Failed to install Xvfb"
+    exit 1
+fi
 print_success "Xvfb installed successfully"
 
 # 6. Install additional dependencies for Electron on Raspberry Pi
 print_status "Installing additional dependencies for Electron..."
-sudo apt install -y \
+wait_for_apt
+if ! sudo apt install -y \
     libnss3-dev \
     libatk-bridge2.0-dev \
     libdrm2 \
@@ -145,7 +201,10 @@ sudo apt install -y \
     libcairo1 \
     libdrm2 \
     libgtk-3-0 \
-    libgdk-pixbuf2.0-0
+    libgdk-pixbuf2.0-0; then
+    print_error "Failed to install Electron dependencies"
+    exit 1
+fi
 
 print_success "Additional Electron dependencies installed"
 
@@ -288,6 +347,12 @@ print_warning "If you encounter any issues, make sure your Raspberry Pi has:"
 print_warning "• At least 1GB of RAM (2GB+ recommended)"
 print_warning "• Sufficient power supply (3A+ recommended)"
 print_warning "• Updated firmware (sudo rpi-update)"
+echo ""
+print_warning "If setup gets stuck on 'waiting for cache lock':"
+print_warning "• Another package manager process is running"
+print_warning "• Stop unattended upgrades: sudo systemctl stop unattended-upgrades"
+print_warning "• Kill blocking processes: sudo killall apt apt-get dpkg unattended-upgrade"
+print_warning "• Wait for automatic updates to complete, then rerun setup"
 echo ""
 print_warning "If you still get 'Cannot find module serialport' errors:"
 print_warning "• Try running: npm install --build-from-source serialport"
