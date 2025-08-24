@@ -51,10 +51,9 @@ fi
 print_status "Starting setup process for Raspbian OS..."
 
 # 1. Update system packages
-print_status "Updating system packages..."
+print_status "Updating system package lists..."
 sudo apt update
-sudo apt upgrade -y
-print_success "System packages updated"
+print_success "Package lists updated"
 
 # 2. Install Node.js and npm
 print_status "Installing Node.js and npm..."
