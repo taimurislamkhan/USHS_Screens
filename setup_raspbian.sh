@@ -158,7 +158,9 @@ print_success "Build tools installed successfully"
 
 # 4. Configure npm for native modules
 print_status "Configuring npm for native module compilation..."
-npm config set python python3
+# Set Python path for node-gyp (newer method)
+export npm_config_python=python3
+export PYTHON=python3
 npm install -g node-gyp
 print_success "npm configured for native modules"
 
