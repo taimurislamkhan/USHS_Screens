@@ -100,6 +100,7 @@ function requestInitialState() {
                 if (response.tipStates.work_position) {
                     const wpData = response.tipStates.work_position;
                     console.log('Loading saved work position data:', wpData);
+                    console.log('Setpoint value:', wpData.setpoint, 'Setpoint_mm value:', wpData.setpoint_mm);
                     
                     // Create a properly formatted work position update
                     // Handle both old format (position_mm/setpoint_mm) and new format (current_position/setpoint)
@@ -110,6 +111,8 @@ function requestInitialState() {
                         tip_distances: {},
                         tip_states: {}
                     };
+                    
+                    console.log('Formatted data for UI update:', formattedData);
                     
                     // Ensure all tip distances are present
                     for (let i = 1; i <= 8; i++) {
@@ -126,8 +129,11 @@ function requestInitialState() {
                     
                     // Don't override with work position tip states - use individual tip data only
                     
-                    // Apply the work position update
-                    handleWorkPositionUpdate(formattedData);
+                    // Apply the work position update with a small delay to ensure UI is ready
+                    setTimeout(() => {
+                        console.log('Applying work position update after delay');
+                        handleWorkPositionUpdate(formattedData);
+                    }, 100);
                 }
             }
         }).catch(error => {
@@ -668,7 +674,7 @@ function showConfirmOverlay() {
     const currentText = (elements.currentPositionText && elements.currentPositionText.textContent) || '0 mm';
     const setpointText = (elements.setpointText && elements.setpointText.textContent) || '0 mm';
     if (bodyText) {
-        bodyText.innerHTML = `Right now the distance is set from ${currentText} to ${setpointText}.<br/>If you want to set your work position tap “Confirm.”<br/>If you want to cancel it tap “Dismiss”.`;
+        bodyText.innerHTML = `Current position is ${currentText}.<br/>If you want to set this as your work position tap "Confirm."<br/>If you want to cancel it tap "Dismiss".`;
     }
     if (!overlay) return;
     overlay.style.display = 'block';
@@ -682,25 +688,39 @@ function showConfirmOverlay() {
     };
 
     const onConfirm = async () => {
-        // 1) Send set work position command to controller
-        sendSetWorkPositionCommand();
-
-        // 2) persist to JSON via main process
+        // Parse current position value
         const parseMm = (t) => {
             if (!t) return 0;
             const n = parseFloat(String(t).replace('mm', '').trim());
             return isNaN(n) ? 0 : n;
         };
-        const positionMm = parseMm(currentText);
-        const setpointMm = parseMm(setpointText);
+        const currentPositionMm = parseMm(currentText);
 
+        // 1) Save current position as the new work position setpoint
         if (window.electronAPI && window.electronAPI.sendMessage) {
             try {
-                await window.electronAPI.sendMessage('save_work_position_json', { positionMm, setpointMm });
+                // Save to JSON with current position as both position and setpoint
+                await window.electronAPI.sendMessage('save_work_position_json', { 
+                    positionMm: currentPositionMm, 
+                    setpointMm: currentPositionMm 
+                });
+                
+                // Update the UI to reflect the new setpoint
+                updateElement('setpoint-text', `${currentPositionMm.toFixed(1)} mm`);
             } catch (e) {
                 console.error('Failed saving work position JSON:', e);
             }
         }
+
+        // 2) Send updated work position to controller
+        const command = {
+            type: 'WPU', // Work Position Update
+            setpoint: currentPositionMm,
+            timestamp: Date.now()
+        };
+        
+        const packet = `WPU:${JSON.stringify(command)}`;
+        sendWorkPositionCommand(packet);
 
         hideConfirmOverlay();
         cleanup();

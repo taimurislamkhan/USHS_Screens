@@ -314,16 +314,24 @@ ipcMain.on('navigate-to-page', (event, path) => {
         }
       } else {
         // For other pages, use the normal update method
-        if (path.includes('work_position') && cachedUIState.workPositionData) {
-          // For work position page, merge tip states from main tip data
+        if (path.includes('work_position')) {
+          // For work position page, read fresh data from JSON file
           try {
             const tipStatesPath = require('path').join(__dirname, 'tip_states.json');
             const data = fs.readFileSync(tipStatesPath, 'utf8');
             const tipStates = JSON.parse(data);
             
+            // Use fresh work position data from file
+            const workPositionData = tipStates.work_position || {
+              current_position: 0,
+              setpoint: 0,
+              speed_mode: 'rapid',
+              tip_distances: {}
+            };
+            
             // Create merged work position data
             const mergedWPData = {
-              ...cachedUIState.workPositionData,
+              ...workPositionData,
               tip_states: {}
             };
             
@@ -336,12 +344,22 @@ ipcMain.on('navigate-to-page', (event, path) => {
             
             // Don't override with saved work position tip states - they should come from individual tip data only
             
-            console.log('Sending merged work position data on navigation:', mergedWPData);
+            console.log('Sending fresh work position data on navigation:', mergedWPData);
+            console.log('Setpoint from file:', mergedWPData.setpoint);
             mainWindow.webContents.send('work-position-update', mergedWPData);
+            
+            // Update cache with fresh data
+            cachedUIState.workPositionData = workPositionData;
           } catch (error) {
             console.error('Error loading work position data:', error);
-            // Fallback to cached data
-            mainWindow.webContents.send('work-position-update', cachedUIState.workPositionData);
+            // Fallback to sending empty data
+            mainWindow.webContents.send('work-position-update', {
+              current_position: 0,
+              setpoint: 0,
+              speed_mode: 'rapid',
+              tip_distances: {},
+              tip_states: {}
+            });
           }
         }
       }
@@ -481,6 +499,9 @@ ipcMain.handle('update_tip_state', async (event, { tipNumber, active }) => {
       mainWindow.webContents.send('tip-state-changed', { tipNumber, active });
     }
     
+    // Send updated tip settings to controller
+    sendSettingsToController('tips');
+    
     return { success: true };
   } catch (error) {
     console.error('Error updating tip state:', error);
@@ -522,6 +543,9 @@ ipcMain.handle('update_heating_setpoint', async (event, { tipNumber, type, value
     
     // Write back to file
     fs.writeFileSync(tipStatesPath, JSON.stringify(tipStates, null, 2));
+    
+    // Send updated tip settings to controller
+    sendSettingsToController('tips');
     
     return { success: true };
   } catch (error) {
@@ -595,6 +619,9 @@ ipcMain.handle('update_configuration', async (event, { key, value }) => {
     }
 
     fs.writeFileSync(tipStatesPath, JSON.stringify(tipStates, null, 2));
+    
+    // Send updated configuration to controller
+    sendSettingsToController('configuration');
 
     return { success: true };
   } catch (error) {
@@ -643,6 +670,10 @@ ipcMain.handle('save_work_position_json', async (event, { positionMm, setpointMm
     };
 
     fs.writeFileSync(tipStatesPath, JSON.stringify(dataObj, null, 2));
+    
+    // Send updated work position to controller
+    sendSettingsToController('work_position');
+    
     return { success: true };
   } catch (error) {
     console.error('Error saving work position to JSON:', error);
@@ -682,6 +713,9 @@ ipcMain.handle('save_work_position_speed', async (event, { speed_mode }) => {
       cachedUIState.workPositionData = {};
     }
     cachedUIState.workPositionData.speed_mode = speed_mode;
+    
+    // Send updated work position to controller
+    sendSettingsToController('work_position');
     
     return { success: true };
   } catch (error) {
@@ -982,8 +1016,9 @@ function initializeSerialHandler() {
       cachedUIState.workPositionData = tipStates.work_position;
       
       // Merge in tip states from individual tip data (not from work position packet)
+      // Use the updated work position data that includes the preserved setpoint
       const mergedWPData = {
-        ...wpData,
+        ...updatedWorkPosition,
         tip_states: {}
       };
       
@@ -997,6 +1032,7 @@ function initializeSerialHandler() {
       // Send to renderer
       if (mainWindow) {
         console.log('Sending work-position-update event to renderer');
+        console.log('Setpoint being sent:', mergedWPData.setpoint);
         mainWindow.webContents.send('work-position-update', mergedWPData);
       } else {
         console.error('mainWindow is null, cannot send work position data!');
@@ -1007,6 +1043,177 @@ function initializeSerialHandler() {
       }
     }, 100); // 100ms debounce
   });
+  
+  // Handle controller wakeup request
+  serialHandler.on('controllerWakeup', async () => {
+    console.log('Controller wakeup request received - sending all settings');
+    
+    try {
+      // Read all settings from tip_states.json
+      const tipStatesPath = path.join(__dirname, 'tip_states.json');
+      let allSettings = {};
+      
+      try {
+        const data = fs.readFileSync(tipStatesPath, 'utf8');
+        allSettings = JSON.parse(data);
+      } catch (err) {
+        console.error('Error reading tip states for wakeup response:', err);
+        return;
+      }
+      
+      // Build comprehensive settings packet
+      const settingsPacket = {
+        // Work position settings
+        work_position: {
+          setpoint: allSettings.work_position?.setpoint || allSettings.work_position?.setpoint_mm || 0,
+          speed_mode: allSettings.work_position?.speed_mode || 'rapid'
+        },
+        
+        // Tip settings (energy, distance, heat start delay, active state)
+        tips: [],
+        
+        // Configuration settings
+        configuration: allSettings.configuration || {
+          weld_time: 0,
+          pulse_energy: 0,
+          cool_time: 0,
+          presence_height: 0,
+          boss_tolerance_minus: 0,
+          boss_tolerance_plus: 0
+        }
+      };
+      
+      // Add tip settings for all 8 tips
+      for (let i = 1; i <= 8; i++) {
+        const tipData = allSettings[i.toString()];
+        if (tipData) {
+          settingsPacket.tips.push({
+            tip_number: i,
+            active: tipData.active || false,
+            energy_setpoint: tipData.energy_setpoint || 0,
+            distance_setpoint: tipData.distance_setpoint || 0,
+            heat_start_delay: tipData.heat_start_delay || 0
+          });
+        } else {
+          // Default tip settings
+          settingsPacket.tips.push({
+            tip_number: i,
+            active: false,
+            energy_setpoint: 0,
+            distance_setpoint: 0,
+            heat_start_delay: 0
+          });
+        }
+      }
+      
+      // Send settings packet to controller
+      const packet = `SETTINGS:${JSON.stringify(settingsPacket)}`;
+      serialHandler.send(packet);
+      console.log('Sent settings packet to controller:', packet);
+      
+    } catch (error) {
+      console.error('Error handling controller wakeup:', error);
+    }
+  });
+}
+
+// Function to send updated settings to controller
+async function sendSettingsToController(settingType = 'all') {
+  if (!serialHandler || !serialHandler.isConnected) {
+    console.log('Serial not connected, cannot send settings');
+    return;
+  }
+  
+  try {
+    // Read current settings
+    const tipStatesPath = path.join(__dirname, 'tip_states.json');
+    let allSettings = {};
+    
+    try {
+      const data = fs.readFileSync(tipStatesPath, 'utf8');
+      allSettings = JSON.parse(data);
+    } catch (err) {
+      console.error('Error reading tip states for settings update:', err);
+      return;
+    }
+    
+    let packet = '';
+    
+    switch (settingType) {
+      case 'work_position':
+        // Send only work position update
+        const wpUpdate = {
+          setpoint: allSettings.work_position?.setpoint || allSettings.work_position?.setpoint_mm || 0,
+          speed_mode: allSettings.work_position?.speed_mode || 'rapid'
+        };
+        packet = `WPU:${JSON.stringify(wpUpdate)}`;
+        break;
+        
+      case 'tips':
+        // Send only tip settings update
+        const tipsUpdate = {
+          tips: []
+        };
+        for (let i = 1; i <= 8; i++) {
+          const tipData = allSettings[i.toString()];
+          if (tipData) {
+            tipsUpdate.tips.push({
+              tip_number: i,
+              active: tipData.active || false,
+              energy_setpoint: tipData.energy_setpoint || 0,
+              distance_setpoint: tipData.distance_setpoint || 0,
+              heat_start_delay: tipData.heat_start_delay || 0
+            });
+          }
+        }
+        packet = `TIPS:${JSON.stringify(tipsUpdate)}`;
+        break;
+        
+      case 'configuration':
+        // Send only configuration update
+        const configUpdate = {
+          configuration: allSettings.configuration || {}
+        };
+        packet = `CFG:${JSON.stringify(configUpdate)}`;
+        break;
+        
+      case 'all':
+      default:
+        // Send all settings (same as wakeup response)
+        const settingsPacket = {
+          work_position: {
+            setpoint: allSettings.work_position?.setpoint || allSettings.work_position?.setpoint_mm || 0,
+            speed_mode: allSettings.work_position?.speed_mode || 'rapid'
+          },
+          tips: [],
+          configuration: allSettings.configuration || {}
+        };
+        
+        for (let i = 1; i <= 8; i++) {
+          const tipData = allSettings[i.toString()];
+          if (tipData) {
+            settingsPacket.tips.push({
+              tip_number: i,
+              active: tipData.active || false,
+              energy_setpoint: tipData.energy_setpoint || 0,
+              distance_setpoint: tipData.distance_setpoint || 0,
+              heat_start_delay: tipData.heat_start_delay || 0
+            });
+          }
+        }
+        
+        packet = `SETTINGS:${JSON.stringify(settingsPacket)}`;
+        break;
+    }
+    
+    if (packet) {
+      serialHandler.send(packet);
+      console.log(`Sent ${settingType} settings to controller:`, packet);
+    }
+    
+  } catch (error) {
+    console.error('Error sending settings to controller:', error);
+  }
 }
 
 // Serial port IPC handlers
@@ -1020,7 +1227,7 @@ ipcMain.handle('serial-list-ports', async () => {
 ipcMain.handle('serial-connect', async (event, { port, baudRate }) => {
   if (serialHandler) {
     try {
-      await serialHandler.connect(port, baudRate || 9600);
+      await serialHandler.connect(port, baudRate || 115200);
       return { success: true };
     } catch (error) {
       return { error: error.message };

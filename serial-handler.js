@@ -19,11 +19,38 @@ class SerialHandler extends EventEmitter {
       // Add virtual ports if they exist
       const virtualPorts = ['/tmp/ttyV0', '/tmp/ttyV1'];
       
+      // Add Raspberry Pi hardware UART ports
+      const raspberryPiUartPorts = [
+        { path: '/dev/ttyAMA0', label: 'RPi UART (GPIO 14/15)' },
+        { path: '/dev/serial0', label: 'RPi Primary UART' },
+        { path: '/dev/serial1', label: 'RPi Secondary UART' }
+      ];
+      
       const portList = ports.map(port => ({
         path: port.path,
         manufacturer: port.manufacturer || 'Unknown',
         serialNumber: port.serialNumber || 'Unknown'
       }));
+
+      // Check if Raspberry Pi UART ports exist and add them
+      for (const uartPort of raspberryPiUartPorts) {
+        try {
+          const exists = require('fs').existsSync(uartPort.path);
+          if (exists) {
+            // Check if already in list from SerialPort.list()
+            const alreadyListed = portList.some(p => p.path === uartPort.path);
+            if (!alreadyListed) {
+              portList.push({
+                path: uartPort.path,
+                manufacturer: 'Raspberry Pi',
+                serialNumber: uartPort.label
+              });
+            }
+          }
+        } catch (e) {
+          // Ignore errors
+        }
+      }
 
       // Check if virtual ports exist and add them
       for (const vPort of virtualPorts) {
@@ -49,7 +76,7 @@ class SerialHandler extends EventEmitter {
     }
   }
 
-  connect(path, baudRate = 9600) {
+  connect(path, baudRate = 115200) {
     return new Promise((resolve, reject) => {
       if (this.isConnected) {
         this.disconnect();
@@ -200,6 +227,19 @@ class SerialHandler extends EventEmitter {
               console.error('Error parsing WP JSON:', jsonError);
               console.error('Raw value was:', value);
             }
+            break;
+            
+          case 'WAKEUP': // Controller wakeup request
+            console.log('Controller wakeup request received');
+            this.emit('controllerWakeup');
+            break;
+            
+          case 'WPU': // Work Position Update acknowledgment
+            console.log('Work position update acknowledged');
+            break;
+            
+          case 'CFG': // Configuration update acknowledgment
+            console.log('Configuration update acknowledged');
             break;
             
           // Add more commands here as needed

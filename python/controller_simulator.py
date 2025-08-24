@@ -466,7 +466,7 @@ class ControllerSimulator:
         try:
             self.serial_port = serial.Serial(
                 port=port,
-                baudrate=9600,
+                baudrate=115200,
                 timeout=0.1,
                 write_timeout=0.1
             )
@@ -479,8 +479,11 @@ class ControllerSimulator:
             self.status_label.config(text="Connected", fg="green")
             self.log(f"Connected to {port}")
             
-            # Send initial state
-            self.send_state()
+            # Send wakeup request to get all settings
+            self.send_wakeup_request()
+            
+            # Send initial state after a short delay
+            self.root.after(500, self.send_state)
             
         except Exception as e:
             self.log(f"Connection error: {e}")
@@ -555,6 +558,27 @@ class ControllerSimulator:
                     # Flash the indicator
                     self.wp_button_indicators['set_work_position'].config(fg="green")
                     self.root.after(500, lambda: self.wp_button_indicators['set_work_position'].config(fg="gray"))
+                    
+                elif command == 'WPU':  # Work Position Update
+                    wp_update = json.loads(payload)
+                    self.log(f"Work position update received: setpoint={wp_update.get('setpoint', 0)}mm")
+                    # Update our stored setpoint
+                    self.work_position_data['setpoint'].set(str(wp_update.get('setpoint', 0)))
+                    
+                elif command == 'SETTINGS':  # All settings update
+                    settings = json.loads(payload)
+                    self.log("Received all settings from app")
+                    self.handle_settings_update(settings)
+                    
+                elif command == 'TIPS':  # Tip settings update
+                    tips_update = json.loads(payload)
+                    self.log("Received tip settings update")
+                    # Handle tip settings update
+                    
+                elif command == 'CFG':  # Configuration update
+                    config_update = json.loads(payload)
+                    self.log("Received configuration update")
+                    # Handle config update
                     
         except Exception as e:
             self.log(f"Error handling received data: {e}")
@@ -734,6 +758,45 @@ class ControllerSimulator:
         """Clean up on window close"""
         self.disconnect()
         self.root.destroy()
+    
+    def send_wakeup_request(self):
+        """Send wakeup request to get all settings from the app"""
+        if self.serial_port and self.serial_port.is_open:
+            try:
+                packet = "WAKEUP:\n"
+                bytes_written = self.serial_port.write(packet.encode())
+                self.serial_port.flush()
+                self.log(f"Sent: WAKEUP request ({bytes_written} bytes)")
+            except Exception as e:
+                self.log(f"Send error: {e}")
+        else:
+            self.log("Port not open, cannot send wakeup")
+    
+    def handle_settings_update(self, settings):
+        """Handle received settings from the app"""
+        try:
+            # Update work position settings
+            if 'work_position' in settings:
+                wp = settings['work_position']
+                self.work_position_data['setpoint'].set(str(wp.get('setpoint', 0)))
+                self.work_position_data['speed_mode'].set(wp.get('speed_mode', 'rapid'))
+                self.log(f"  Work Position: setpoint={wp.get('setpoint', 0)}mm, speed={wp.get('speed_mode', 'rapid')}")
+            
+            # Update tip settings
+            if 'tips' in settings:
+                for tip in settings['tips']:
+                    tip_num = tip['tip_number']
+                    self.log(f"  Tip {tip_num}: active={tip['active']}, energy={tip['energy_setpoint']}J, " +
+                            f"distance={tip['distance_setpoint']}mm, delay={tip['heat_start_delay']}s")
+            
+            # Update configuration
+            if 'configuration' in settings:
+                cfg = settings['configuration']
+                self.log(f"  Configuration: weld_time={cfg.get('weld_time', 0)}s, " +
+                        f"pulse_energy={cfg.get('pulse_energy', 0)}J, cool_time={cfg.get('cool_time', 0)}s")
+                
+        except Exception as e:
+            self.log(f"Error handling settings update: {e}")
 
 if __name__ == "__main__":
     simulator = ControllerSimulator()

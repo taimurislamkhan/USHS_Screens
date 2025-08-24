@@ -86,27 +86,27 @@
     "history": []
   },
   "work_position": {
-    "current_position": 1.1,
-    "setpoint": 0.9,
-    "speed_mode": "fine",
+    "current_position": 0.6,
+    "setpoint": 2.8,
+    "speed_mode": "rapid",
     "tip_distances": {
-      "1": 1.2,
+      "1": 0,
       "2": 0,
-      "3": 0.7,
+      "3": 0,
       "4": 0,
       "5": 0,
       "6": 0,
       "7": 0,
       "8": 0
     },
-    "position_mm": 1.1,
-    "setpoint_mm": 0.9,
-    "updated_at": "2025-08-23T19:37:45.305Z"
+    "position_mm": 0.6,
+    "setpoint_mm": 2.8,
+    "updated_at": "2025-08-24T11:08:32.276Z"
   },
   "cycle_progress": {
     "home": "done",
-    "work_position": "done",
-    "encoder_zero": "active",
+    "work_position": "active",
+    "encoder_zero": "inactive",
     "heat": "inactive",
     "cool": "inactive",
     "cycle_complete": "inactive"
