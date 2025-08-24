@@ -40,12 +40,14 @@ fi
 chmod +x "$UART_TEST_SCRIPT"
 
 # Check if UART device exists
-UART_DEVICE="/dev/serial0"
+UART_DEVICE="/dev/ttyAMA10"
 if [ ! -e "$UART_DEVICE" ]; then
     echo -e "${YELLOW}Warning: $UART_DEVICE not found${NC}"
     echo -e "Alternative devices to try:"
+    echo -e "  - /dev/serial0 (Primary UART symlink)"
     echo -e "  - /dev/ttyS0 (Mini UART)"
     echo -e "  - /dev/ttyAMA0 (PL011 UART)"
+    echo -e "  - /dev/ttyAMA10 (Alternative UART)"
     echo ""
     echo -e "Make sure UART is enabled in raspi-config:"
     echo -e "  sudo raspi-config → Interface Options → Serial Port"

@@ -2,7 +2,12 @@
 """
 Simple UART Test Script for Raspberry Pi 5
 Continuously sends "hello world" via UART on GPIO 14 (TX) and 15 (RX)
-Uses /dev/serial0 which maps to the primary UART on GPIO 14/15
+Uses /dev/ttyAMA10 - adjust this if your system shows a different UART port
+
+To find available UART ports on your Pi, run:
+  ls -la /dev/tty* | grep -E "(AMA|serial)"
+  
+Common ports: /dev/ttyAMA0, /dev/ttyAMA10, /dev/serial0, /dev/ttyS0
 """
 
 import serial
@@ -11,8 +16,8 @@ import sys
 
 def main():
     # UART configuration for Raspberry Pi 5
-    # /dev/serial0 is the primary UART on GPIO 14/15
-    uart_port = "/dev/serial0"
+    # /dev/ttyAMA10 is the UART port detected on this system
+    uart_port = "/dev/ttyAMA10"
     baud_rate = 115200
     
     print(f"UART Test Script for Raspberry Pi 5")
@@ -62,7 +67,8 @@ def main():
         print("1. Make sure UART is enabled in raspi-config")
         print("2. Check if the serial console is disabled")
         print("3. Verify UART permissions (add user to dialout group)")
-        print("4. Try different port like /dev/ttyS0 or /dev/ttyAMA0")
+        print("4. Try different port like /dev/ttyS0, /dev/ttyAMA0, or /dev/serial0")
+        print("5. List available ports with: ls -la /dev/tty* | grep AMA")
         sys.exit(1)
         
     except PermissionError as e:
