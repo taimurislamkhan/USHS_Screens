@@ -1227,7 +1227,7 @@ ipcMain.handle('serial-list-ports', async () => {
 ipcMain.handle('serial-connect', async (event, { port, baudRate }) => {
   if (serialHandler) {
     try {
-      await serialHandler.connect(port, baudRate || 115200);
+      await serialHandler.connect(port, baudRate || 1000000);
       return { success: true };
     } catch (error) {
       return { error: error.message };
