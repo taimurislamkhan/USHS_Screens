@@ -209,7 +209,7 @@
       }
       
       try {
-        const result = await window.electronAPI.serial.connect(port, 1000000);
+        const result = await window.electronAPI.serial.connect(port, 921600);
         if (result.success) {
           isConnected = true;
           currentPort = port;
