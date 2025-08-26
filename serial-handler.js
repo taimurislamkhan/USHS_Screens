@@ -76,7 +76,7 @@ class SerialHandler extends EventEmitter {
     }
   }
 
-  connect(path, baudRate = 1000000) {
+  connect(path, baudRate = 115200) {
     return new Promise((resolve, reject) => {
       if (this.isConnected) {
         this.disconnect();
