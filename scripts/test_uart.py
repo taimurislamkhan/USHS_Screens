@@ -14,11 +14,12 @@ def list_serial_ports():
     ports = []
     # Common serial port paths on Raspberry Pi
     common_ports = [
-        '/dev/ttyAMA0',
+        '/dev/ttyAMA0', # Raspberry Pi 5 UART
         '/dev/serial0',
         '/dev/serial1',
         '/dev/ttyUSB0',
-        '/dev/ttyUSB1'
+        '/dev/ttyUSB1',
+        '/dev/ttyS0'  # Mini UART
     ]
     
     print("Checking for available serial ports...")
@@ -109,8 +110,14 @@ def interactive_test(port_path, baudrate=9600):
         while True:
             # Check for incoming data
             if ser.in_waiting > 0:
-                incoming = ser.readline().decode().strip()
-                print(f"<< Received: {incoming}")
+                try:
+                    incoming = ser.readline().decode('utf-8', errors='ignore').strip()
+                    if incoming:  # Only print if there's actual content
+                        print(f"<< Received: {incoming}")
+                except Exception as e:
+                    # Handle any decoding errors
+                    raw_data = ser.read(ser.in_waiting)
+                    print(f"<< Received (raw bytes): {raw_data}")
             
             # Check for user input (non-blocking)
             try:
@@ -121,22 +128,37 @@ def interactive_test(port_path, baudrate=9600):
                         break
                     ser.write((line + '\n').encode())
                     print(f">> Sent: {line}")
-            except:
-                # Fallback for Windows
-                line = input(">> ")
+            except ImportError:
+                # select not available on this system
+                print("Enter message (or 'quit' to exit): ", end='', flush=True)
+                line = input()
                 if line.lower() == 'quit':
                     break
                 ser.write((line + '\n').encode())
+                print(f">> Sent: {line}")
+            except EOFError:
+                # Handle Ctrl+D or input stream closed
+                print("\nInput stream closed. Exiting...")
+                break
+            except Exception as e:
+                print(f"Input error: {e}")
+                break
+            
+            time.sleep(0.1)  # Small delay to prevent excessive CPU usage
         
         ser.close()
         print("\nInteractive test ended.")
         
     except serial.SerialException as e:
         print(f"Serial error: {e}")
+        print("Check your UART connection and port settings.")
     except KeyboardInterrupt:
-        print("\nTest interrupted.")
+        print("\nTest interrupted by user (Ctrl+C).")
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Unexpected error in interactive test: {e}")
+        import traceback
+        print("Full traceback:")
+        traceback.print_exc()
 
 def main():
     print("Raspberry Pi UART Test Tool")
